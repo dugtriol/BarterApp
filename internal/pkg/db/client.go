@@ -4,15 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	`github.com/dugtriol/BarterApp/internal/config`
 	"github.com/jackc/pgx/v5/pgxpool"
-)
-
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "test"
-	password = "test"
-	dbname   = "test"
 )
 
 func NewDB(ctx context.Context) (*Database, error) {
@@ -24,12 +17,13 @@ func NewDB(ctx context.Context) (*Database, error) {
 }
 
 func generateDsn() string {
+	cfg := config.MustLoad()
 	return fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s ssmode=disable",
-		host,
-		port,
-		user,
-		password,
-		dbname,
+		"host=%s port=%d user=%s password=%s dbname=%s",
+		cfg.DatabaseData.Host,
+		cfg.DatabaseData.Port,
+		cfg.DatabaseData.User,
+		cfg.DatabaseData.Password,
+		cfg.DatabaseData.DBName,
 	)
 }

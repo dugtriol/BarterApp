@@ -2,140 +2,104 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"strconv"
+	`log/slog`
+	`net/http`
+	`os`
 
+	`github.com/dugtriol/BarterApp/internal/config`
+	`github.com/dugtriol/BarterApp/internal/http-server/handlers/user/url/get`
+	`github.com/dugtriol/BarterApp/internal/http-server/handlers/user/url/save`
+	mwLogger `github.com/dugtriol/BarterApp/internal/http-server/middleware/logger`
 	"github.com/dugtriol/BarterApp/internal/pkg/db"
-	"github.com/dugtriol/BarterApp/internal/pkg/repository"
-	"github.com/dugtriol/BarterApp/internal/pkg/repository/postgresql"
-	"github.com/gorilla/mux"
+	`github.com/dugtriol/BarterApp/internal/pkg/lib/logger/handlers/slogpretty`
+	`github.com/dugtriol/BarterApp/internal/pkg/lib/logger/sl`
+	"github.com/dugtriol/BarterApp/internal/pkg/storage/postgresql"
+	`github.com/go-chi/chi/v5`
+	`github.com/go-chi/chi/v5/middleware`
 )
 
 const (
-	port          = ":9000"
-	queryParamKey = "key"
+	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
 )
-
-type server1 struct {
-	repo *postgresql.UserRepo
-}
-
-type addArticleRequest struct {
-	Name   string `json:"name"`
-	Rating int64  `json:"rating"`
-}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	cfg := config.MustLoad()
+
+	log := setupLogger(cfg.Env)
+	log.Info("initializing server", slog.String("address", cfg.Address))
+	log.Debug("logger debug mode enabled")
+
 	database, err := db.NewDB(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err.Error())
 	}
 	defer database.GetPool(ctx).Close()
 
-	articleRepo := postgresql.NewArticles(database)
-	implementation := server1{repo: articleRepo}
-	router := createRouter(implementation)
-	http.Handle("/", router)
-	if err := http.ListenAndServe(port, nil); err != nil {
-		log.Fatal(err)
+	storage := postgresql.New(database)
+
+	if err != nil {
+		log.Error("failed to init storage ", sl.Err(err))
+		os.Exit(1)
+	}
+	_ = storage
+
+	router := chi.NewRouter()
+	// Добавляет request_id в каждый запрос, для трейсинга
+	router.Use(middleware.RequestID)
+	// Логирование всех запросов
+	router.Use(middleware.Logger)
+	router.Use(mwLogger.New(log))
+	// Парсер URLов поступающих запросов
+	router.Use(middleware.URLFormat)
+	// Если где-то внутри сервера (обработчика запроса) произойдет паника, приложение не должно упасть
+	router.Use(middleware.Recoverer)
+
+	// TODO: router.POST, router.Get
+	router.Post("/user", save.New(ctx, log, storage))
+	router.Get("/user/{id}", get.New(ctx, log, storage))
+
+	serv := &http.Server{
+		Addr:         cfg.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
+	}
+
+	log.Info("start server")
+	if err := serv.ListenAndServe(); err != nil {
+		log.Error("failed to start server")
+		os.Exit(1)
 	}
 }
 
-func createRouter(implementation server1) *mux.Router {
-	router := mux.NewRouter()
+func setupLogger(env string) *slog.Logger {
+	// slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	var log *slog.Logger
+	switch env {
+	case envLocal:
+		log = setupPrettySlog()
+	case envDev:
+		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	case envProd:
+		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	}
+	return log
+}
 
-	router.HandleFunc(
-		"/article", func(w http.ResponseWriter, req *http.Request) {
-			switch req.Method {
-			case http.MethodPost:
-				implementation.Create(w, req)
-			case http.MethodPut:
-				implementation.Update(w, req)
-			default:
-				fmt.Println("error")
-			}
-
+func setupPrettySlog() *slog.Logger {
+	opts := slogpretty.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
 		},
-	)
-
-	router.HandleFunc(
-		fmt.Sprintf("/article/{%s:[0-9]+}", queryParamKey), func(w http.ResponseWriter, req *http.Request) {
-			switch req.Method {
-			case http.MethodGet:
-				implementation.Get(w, req)
-			case http.MethodDelete:
-				implementation.Delete(w, req)
-			default:
-				fmt.Println("error")
-			}
-		},
-	)
-	return router
-}
-
-func (s *server1) Create(w http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
-	var unm addArticleRequest
-	if err = json.Unmarshal(body, &unm); err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	articleRepo := &repository.User{
-		Name:   unm.Name,
-		Rating: unm.Rating,
-	}
-	id, err := s.repo.Add(req.Context(), articleRepo)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	articleRepo.ID = id
-	articleJson, _ := json.Marshal(articleRepo)
-	w.Write(articleJson)
-}
 
-func (s *server1) Update(_ http.ResponseWriter, req *http.Request) {
-	println("update")
+	handler := opts.NewPrettyHandler(os.Stdout)
 
-}
-
-func (s *server1) Delete(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("delete")
-
-}
-
-func (s *server1) Get(w http.ResponseWriter, req *http.Request) {
-	key, ok := mux.Vars(req)[queryParamKey]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	keyInt, err := strconv.ParseInt(key, 10, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	article, err := s.repo.GetByID(req.Context(), keyInt)
-	if err != nil {
-		if errors.Is(err, repository.ErrObjectNoFound) {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	articleJson, _ := json.Marshal(article)
-	w.Write(articleJson)
+	return slog.New(handler)
 }
