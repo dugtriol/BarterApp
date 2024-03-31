@@ -12,6 +12,7 @@ type Config struct {
 	Env          string `yaml:"env" env-default:"local"`
 	HTTPServer   `yaml:"http_server"`
 	DatabaseData `yaml:"database_data"`
+	EmailData    `yaml:"email_data"`
 }
 
 type HTTPServer struct {
@@ -29,6 +30,12 @@ type DatabaseData struct {
 	User     string `yaml:"user" env-default:"test"`
 	Password string `yaml:"password" env-required:"true"`
 	DBName   string `yaml:"dbname" env-default:"barterDB"`
+}
+
+type EmailData struct {
+	EmailSenderName     string `yaml:"EMAIL_SENDER_NAME"`
+	EmailSenderAddress  string `yaml:"EMAIL_SENDER_ADDRESS"`
+	EmailSenderPassword string `yaml:"EMAIL_SENDER_PASSWORD"`
 }
 
 func MustLoad() *Config {

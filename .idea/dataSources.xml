@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="barterDB@localhost" uuid="e00ecf7d-8682-424b-950d-f3f478738cf5">
+    <data-source source="LOCAL" name="barterDB@localhost" uuid="1cd9ba0e-0027-49c1-94c2-34694a5897e4">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>

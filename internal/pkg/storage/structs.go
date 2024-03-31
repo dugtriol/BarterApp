@@ -1,10 +1,16 @@
 package storage
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID        int64     `db:"id"`
-	Username  string    `db:"username"`
+	ID        uuid.UUID `db:"id"`
+	IdOwner   uuid.UUID `db:"id_owner"`
+	Name      string    `db:"name"`
+	Lastname  string    `db:"lastname"`
 	Email     string    `db:"email"`
 	Password  string    `db:"password"`
 	City      string    `db:"city"`

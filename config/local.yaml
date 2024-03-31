@@ -11,3 +11,7 @@ database_data:
   user: "test"
   password: "test"
   dbname: "barterDB"
+email_data:
+  EMAIL_SENDER_NAME: "barterapp"
+  EMAIL_SENDER_ADDRESS: "barterappproject@gmail.com"
+  EMAIL_SENDER_PASSWORD: "fvxy nozn xvwg rbah"

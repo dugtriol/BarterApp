@@ -1,28 +1,37 @@
 package main
 
 import (
-	"context"
-	`log/slog`
+	`context`
+	"log/slog"
 	`net/http`
-	`os`
+	"os"
 
 	`github.com/dugtriol/BarterApp/internal/config`
-	`github.com/dugtriol/BarterApp/internal/http-server/handlers/user/url/get`
-	`github.com/dugtriol/BarterApp/internal/http-server/handlers/user/url/save`
+	`github.com/dugtriol/BarterApp/internal/http-server/handlers/authentication`
+	`github.com/dugtriol/BarterApp/internal/http-server/handlers/product`
+	`github.com/dugtriol/BarterApp/internal/http-server/handlers/user`
 	mwLogger `github.com/dugtriol/BarterApp/internal/http-server/middleware/logger`
-	"github.com/dugtriol/BarterApp/internal/pkg/db"
-	`github.com/dugtriol/BarterApp/internal/pkg/lib/logger/handlers/slogpretty`
+	`github.com/dugtriol/BarterApp/internal/pkg/db`
+	"github.com/dugtriol/BarterApp/internal/pkg/lib/logger/handlers/slogpretty"
 	`github.com/dugtriol/BarterApp/internal/pkg/lib/logger/sl`
-	"github.com/dugtriol/BarterApp/internal/pkg/storage/postgresql"
+	`github.com/dugtriol/BarterApp/internal/pkg/storage/postgresql`
 	`github.com/go-chi/chi/v5`
 	`github.com/go-chi/chi/v5/middleware`
+	"github.com/go-chi/jwtauth/v5"
 )
 
 const (
 	envLocal = "local"
 	envDev   = "dev"
 	envProd  = "prod"
+	secret   = "secret"
 )
+
+var tokenAuth *jwtauth.JWTAuth
+
+func init() {
+	tokenAuth = jwtauth.New("HS256", []byte(secret), nil)
+}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -41,27 +50,41 @@ func main() {
 	defer database.GetPool(ctx).Close()
 
 	storage := postgresql.New(database)
+	_ = storage
 
 	if err != nil {
 		log.Error("failed to init storage ", sl.Err(err))
 		os.Exit(1)
 	}
-	_ = storage
 
 	router := chi.NewRouter()
-	// Добавляет request_id в каждый запрос, для трейсинга
 	router.Use(middleware.RequestID)
-	// Логирование всех запросов
 	router.Use(middleware.Logger)
 	router.Use(mwLogger.New(log))
-	// Парсер URLов поступающих запросов
 	router.Use(middleware.URLFormat)
-	// Если где-то внутри сервера (обработчика запроса) произойдет паника, приложение не должно упасть
 	router.Use(middleware.Recoverer)
 
-	// TODO: router.POST, router.Get
-	router.Post("/user", save.New(ctx, log, storage))
-	router.Get("/user/{id}", get.New(ctx, log, storage))
+	router.Group(
+		func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			r.Delete("/user/{id}", user.Delete(ctx, log, storage))
+			r.Post("/user/update/city/{id}", user.UpdateCity(ctx, log, storage))
+			r.Post("/user/update/password/{id}", user.UpdatePassword(ctx, log, storage))
+			r.Get("/user/{id}", user.Get(ctx, log, storage))
+			r.Post("/product", product.Save(ctx, log, storage))
+			r.Delete("/product", product.Delete(ctx, log, storage))
+		},
+	)
+
+	router.Group(
+		func(r chi.Router) {
+			r.Post("/register", user.Save(ctx, log, storage))
+			r.Post("/login", authentication.LogIn(ctx, log, tokenAuth, storage))
+			r.Post("/logout", authentication.LogOut(ctx, log))
+		},
+	)
 
 	serv := &http.Server{
 		Addr:         cfg.Address,
@@ -79,7 +102,6 @@ func main() {
 }
 
 func setupLogger(env string) *slog.Logger {
-	// slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	var log *slog.Logger
 	switch env {
 	case envLocal:
@@ -98,7 +120,6 @@ func setupPrettySlog() *slog.Logger {
 			Level: slog.LevelDebug,
 		},
 	}
-
 	handler := opts.NewPrettyHandler(os.Stdout)
 
 	return slog.New(handler)
