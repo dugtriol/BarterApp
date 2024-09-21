@@ -8,32 +8,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dugtriol/BarterApp/graph/model"
+	"github.com/dugtriol/BarterApp/internal/controller/graph"
+	"github.com/dugtriol/BarterApp/internal/controller/graph/model"
 )
 
 // CreateUser is the resolver for the CreateUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input *model.CreateUserInput) (*model.User, error) {
-	user := model.User{
-		ID:             fmt.Sprintf("user %s", input.Name),
-		Name:           input.Name,
-		Email:          input.Email,
-		Phone:          input.Phone,
-		City:           input.City,
-		Mode:           model.UserModeClient,
-		PostedProducts: nil,
-	}
-	//users = append(users, &user)
-	return &user, nil
+	panic(fmt.Errorf("not implemented: CreateUser - CreateUser"))
 }
 
 // TotalUsers is the resolver for the totalUsers field.
 func (r *queryResolver) TotalUsers(ctx context.Context) (int, error) {
-	return 1, nil
+	panic(fmt.Errorf("not implemented: TotalUsers - totalUsers"))
 }
 
 // AllUsers is the resolver for the allUsers field.
 func (r *queryResolver) AllUsers(ctx context.Context) ([]*model.User, error) {
-	return nil, nil
+	panic(fmt.Errorf("not implemented: AllUsers - allUsers"))
 }
 
 // TotalProducts is the resolver for the totalProducts field.
@@ -61,14 +52,14 @@ func (r *subscriptionResolver) NewProduct(ctx context.Context, category *model.P
 	panic(fmt.Errorf("not implemented: NewProduct - newProduct"))
 }
 
-// Mutation returns MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+// Mutation returns graph.MutationResolver implementation.
+func (r *Resolver) Mutation() graph.MutationResolver { return &mutationResolver{r} }
 
-// Query returns QueryResolver implementation.
-func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+// Query returns graph.QueryResolver implementation.
+func (r *Resolver) Query() graph.QueryResolver { return &queryResolver{r} }
 
-// Subscription returns SubscriptionResolver implementation.
-func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
+// Subscription returns graph.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() graph.SubscriptionResolver { return &subscriptionResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
