@@ -1,0 +1,74 @@
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    phone: String!
+    city: String!
+    mode: UserMode!
+    postedProducts: [Product!]!
+}
+
+type Product {
+    id: ID!
+    category: ProductCategory!
+    name: String!
+    description: String
+    image: String
+    status: ProductStatus!
+    createdBy: User!
+    createdAt: DateTime!
+}
+
+scalar DateTime
+
+enum ProductCategory {
+    HOME
+    CLOTHES
+}
+
+enum ProductStatus {
+    CREATED
+    SOLD
+}
+
+enum UserMode {
+    CLIENT
+    ADMIN
+}
+
+type Query {
+    totalUsers: Int!
+    allUsers: [User!]!
+    totalProducts: Int!
+    allProducts(category: ProductCategory, first: Int=10, start: Int=0): [Product!]!
+
+    User(id: ID!): User!
+    Product(id: ID!): Product!
+
+}
+
+input CreateUserInput {
+    name: String!
+    email: String!
+    phone: String!
+    city: String!
+}
+
+type AuthPayload {
+    user: User!
+    token: String!
+}
+
+type Mutation {
+    CreateUser(input: CreateUserInput): User!
+}
+
+type Subscription {
+  newProduct(category: ProductCategory): Product!
+}
+
+schema {
+    query: Query
+    mutation: Mutation
+    subscription: Subscription
+}
