@@ -1,19 +1,33 @@
 package app
 
 import (
-	"log"
+	"context"
+	"fmt"
 
 	"github.com/dugtriol/BarterApp/config"
+	"github.com/dugtriol/BarterApp/pkg/postgres"
 )
 
 func Run(configPath string) {
-	// Configuration
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// config
 	cfg, err := config.NewConfig(configPath)
 	if err != nil {
-		log.Fatalf("Config error: %s", err)
+		fmt.Println(err.Error())
+	}
+	fmt.Println(cfg)
+
+	//logger
+	log := setLogger(cfg.Level)
+	log.Info("Init logger")
+
+	//postgres
+	database, err := postgres.New(ctx, cfg.Conn, postgres.MaxPoolSize(cfg.MaxPoolSize))
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 
-	// Logger
-	SetLogrus(cfg.Log.Level)
+	_ = database
 
 }
