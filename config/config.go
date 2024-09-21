@@ -13,7 +13,7 @@ type (
 		HTTP     `yaml:"http"`
 		Database `yaml:"database"`
 		Log      `yaml:"log"`
-		Hasher   `yaml:"hasher"`
+		//Hasher   `yaml:"hasher"`
 	}
 
 	HTTP struct {
@@ -32,9 +32,9 @@ type (
 		Level string `env-required:"true" yaml:"level" env:"LOG_LEVEL"`
 	}
 
-	Hasher struct {
-		Salt string `env-required:"true" env:"HASHER_SALT"`
-	}
+	//Hasher struct {
+	//	Salt string `env-required:"true" env:"HASHER_SALT"`
+	//}
 )
 
 func NewConfig(configPath string) (*Config, error) {
