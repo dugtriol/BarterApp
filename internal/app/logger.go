@@ -1,21 +1,30 @@
 package app
 
 import (
-	"github.com/sirupsen/logrus"
+	"log/slog"
 	"os"
 )
 
-func SetLogrus(level string) {
-	logrusLevel, err := logrus.ParseLevel(level)
-	if err != nil {
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
-		logrus.SetLevel(logrusLevel)
+func setLogger(level string) *slog.Logger {
+	var log *slog.Logger
+	switch level {
+	case "local":
+		log = slog.New(
+			slog.NewTextHandler(
+				os.Stdout, &slog.HandlerOptions{
+					Level: slog.LevelDebug,
+				},
+			),
+		)
+	default:
+		log = slog.New(
+			slog.NewJSONHandler(
+				os.Stdout, &slog.HandlerOptions{
+					Level: slog.LevelInfo,
+				},
+			),
+		)
 	}
 
-	logrus.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: "2006-01-02 15:04:05",
-	})
-
-	logrus.SetOutput(os.Stdout)
+	return log
 }
