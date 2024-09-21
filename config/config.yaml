@@ -1,15 +1,10 @@
-app:
-  name: 'barter-app'
-  version: '1.0.0'
-
 http:
-  port: 8080
+  port: ":8080"
+  timeout: "4s"
+  idle_timeout: "60s"
 
 log:
-  level: 'debug'
+  level: "local"
 
-postgres:
-  max_pool_size: 20
-
-jwt:
-  token_ttl: 120m
+database:
+  max_pool_size: 2
