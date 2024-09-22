@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+	"github.com/dugtriol/BarterApp/internal/controller/graph/model"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo"
 )
@@ -19,6 +22,7 @@ type AuthRegisterInput struct {
 }
 
 type AuthGenerateTokenInput struct {
+	Id       string
 	Email    string
 	Password string
 }
@@ -26,15 +30,33 @@ type AuthGenerateTokenInput struct {
 type UserGetByIdInput struct {
 	Id string
 }
+type UserGetByEmailInput struct {
+	Email string
+}
 
 type Auth interface {
 	Register(ctx context.Context, input AuthRegisterInput) (entity.User, error)
 	GetById(ctx context.Context, log *slog.Logger, input UserGetByIdInput) (entity.User, error)
-	//GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error)
-	//ParseToken(token string) (int, error)
+	GetByEmail(ctx context.Context, log *slog.Logger, input UserGetByEmailInput) (entity.User, error)
+	GenToken(id string) (*model.AuthToken, error)
+	ParseToken(r *http.Request) (*jwt.Token, error)
+}
+
+type CreateProductInput struct {
+	Category    string
+	Name        string
+	Description string
+	Image       string
+	UserId      string
+}
+
+type GetByIdProductInput struct {
+	Id string
 }
 
 type Product interface {
+	Create(ctx context.Context, input CreateProductInput) (entity.Product, error)
+	GetById(ctx context.Context, log *slog.Logger, input GetByIdProductInput) (entity.Product, error)
 }
 
 type Services struct {
