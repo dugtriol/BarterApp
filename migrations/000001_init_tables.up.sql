@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS products
     name  VARCHAR(50) NOT NULL,
     description VARCHAR(50) NOT NULL,
     image  VARCHAR(150),
-    status product_status,
+    status product_status DEFAULT 'CREATED',
     category product_category,
     user_id UUID REFERENCES users (id) ON DELETE CASCADE,
     created_at TIMESTAMP        DEFAULT CURRENT_TIMESTAMP
