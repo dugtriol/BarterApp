@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/dugtriol/BarterApp/config"
 	"github.com/dugtriol/BarterApp/internal/repo"
@@ -36,8 +37,9 @@ func Run(configPath string) {
 	}
 
 	//repositories
+	tokenTTL := time.Hour * 24
 	repos := repo.NewRepositories(database)
-	dependencies := service.ServicesDependencies{Repos: repos}
+	dependencies := service.ServicesDependencies{Repos: repos, SignKey: os.Getenv("JWT_SECRET"), TokenTTL: tokenTTL}
 
 	//services
 	services := service.NewServices(dependencies)
