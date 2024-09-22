@@ -10,4 +10,7 @@ var (
 	ErrCannotCreateUser  = fmt.Errorf("cannot create user")
 	ErrUserNotFound      = fmt.Errorf("user not found")
 	ErrCannotGetUser     = fmt.Errorf("cannot get user")
+
+	ErrProductAlreadyExists = fmt.Errorf("product already exists")
+	ErrCannotCreateProduct  = fmt.Errorf("cannot create product")
 )
