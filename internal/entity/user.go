@@ -1,10 +1,11 @@
 package entity
 
-import "time"
-
 type User struct {
-	Id        int       `db:"id"`
-	Username  string    `db:"username"`
-	Password  string    `db:"password"`
-	CreatedAt time.Time `db:"created_at"`
+	Id       string `db:"id"`
+	Name     string `db:"name"`
+	Email    string `db:"email"`
+	Phone    string `db:"phone"`
+	Password string `db:"password"`
+	City     string `db:"city"`
+	Mode     string `db:"mode"`
 }
