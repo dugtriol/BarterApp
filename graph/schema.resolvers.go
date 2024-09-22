@@ -12,9 +12,19 @@ import (
 	"github.com/dugtriol/BarterApp/internal/controller/graph/model"
 )
 
-// CreateUser is the resolver for the CreateUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, input *model.CreateUserInput) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: CreateUser - CreateUser"))
+// Register is the resolver for the Register field.
+func (r *mutationResolver) Register(ctx context.Context, input *model.CreateUserInput) (*model.AuthResponse, error) {
+	panic(fmt.Errorf("not implemented: Register - Register"))
+}
+
+// Login is the resolver for the Login field.
+func (r *mutationResolver) Login(ctx context.Context, input *model.LoginInput) (*model.AuthResponse, error) {
+	panic(fmt.Errorf("not implemented: Login - Login"))
+}
+
+// CreateProduct is the resolver for the CreateProduct field.
+func (r *mutationResolver) CreateProduct(ctx context.Context, input *model.CreateProductInput) (*model.Product, error) {
+	panic(fmt.Errorf("not implemented: Create - Create"))
 }
 
 // TotalUsers is the resolver for the totalUsers field.
