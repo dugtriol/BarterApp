@@ -7,10 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	ql "github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/dugtriol/BarterApp/config"
-	"github.com/dugtriol/BarterApp/internal/controller/graph"
 	"github.com/dugtriol/BarterApp/internal/repo"
 	"github.com/dugtriol/BarterApp/internal/service"
 	"github.com/dugtriol/BarterApp/pkg/httpserver"
@@ -49,12 +46,8 @@ func Run(configPath string) {
 	//handlers
 	log.Info("Initializing graphql api endpoint")
 
-	graphConfig := graph.Config{Resolvers: &graph.Resolver{Log: log, Services: services}}
-	gserver := ql.NewDefaultServer(graph.NewExecutableSchema(graphConfig))
 	router := chi.NewRouter()
-	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	router.Handle("/query", gserver)
-
+	NewRouter(ctx, log, router, services, cfg.Port)
 	// HTTP server
 	log.Info("Starting http server...")
 	log.Debug(fmt.Sprintf("Server port: %s", cfg.Port))
