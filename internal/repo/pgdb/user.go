@@ -60,16 +60,11 @@ func (u UserRepo) Create(ctx context.Context, user entity.User) (entity.User, er
 	return output, nil
 }
 
-func (u UserRepo) GetUserByUsernameAndPassword(ctx context.Context, username, password string) (entity.User, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (u UserRepo) GetUserById(ctx context.Context, id string) (entity.User, error) {
+func (u UserRepo) GetByField(ctx context.Context, field, value string) (entity.User, error) {
 	sql, args, _ := u.Builder.
 		Select("*").
 		From(userTable).
-		Where("id = ?", id).
+		Where(fmt.Sprintf("%v = ?", field), value).
 		ToSql()
 	log.Info(sql)
 	var output entity.User
@@ -86,12 +81,19 @@ func (u UserRepo) GetUserById(ctx context.Context, id string) (entity.User, erro
 		if errors.Is(err, pgx.ErrNoRows) {
 			return entity.User{}, repoerrs.ErrNotFound
 		}
-		return entity.User{}, fmt.Errorf("UserRepo - GetUserById - r.Cluster.QueryRow: %v", err)
+		return entity.User{}, fmt.Errorf("UserRepo - GetByField %s - r.Cluster.QueryRow: %v", field, err)
 	}
 	return output, nil
 }
 
-func (u UserRepo) GetUserByUsername(ctx context.Context, username string) (entity.User, error) {
-	//TODO implement me
-	panic("implement me")
+func (u UserRepo) GetById(ctx context.Context, id string) (entity.User, error) {
+	return u.GetByField(ctx, "id", id)
+}
+
+func (u UserRepo) GetByUsername(ctx context.Context, username string) (entity.User, error) {
+	return u.GetByField(ctx, "name", username)
+}
+
+func (u UserRepo) GetByEmail(ctx context.Context, email string) (entity.User, error) {
+	return u.GetByField(ctx, "email", email)
 }
