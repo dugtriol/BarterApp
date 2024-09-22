@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/dugtriol/BarterApp/internal/entity"
@@ -37,6 +39,7 @@ func NewAuthService(
 }
 
 func (s *AuthService) Register(ctx context.Context, input AuthRegisterInput) (entity.User, error) {
+	//log.Info(fmt.Sprintf("Service - AuthService - Create"))
 	password, err := hasher.HashPassword(input.Password)
 	if err != nil {
 		log.Errorf("AuthService.Register - s.passwordHasher.HashPassword: %v", err)
@@ -50,7 +53,7 @@ func (s *AuthService) Register(ctx context.Context, input AuthRegisterInput) (en
 		Mode:     input.Mode,
 	}
 
-	output, err := s.userRepo.CreateUser(ctx, user)
+	output, err := s.userRepo.Create(ctx, user)
 	if err != nil {
 		if errors.Is(err, repoerrs.ErrAlreadyExists) {
 			return entity.User{}, ErrUserAlreadyExists
@@ -59,6 +62,21 @@ func (s *AuthService) Register(ctx context.Context, input AuthRegisterInput) (en
 		return entity.User{}, ErrCannotCreateUser
 	}
 	return output, nil
+}
+
+func (s *AuthService) GetById(ctx context.Context, log *slog.Logger, input UserGetByIdInput) (entity.User, error) {
+	//log.Info(fmt.Sprintf("Service - AuthService - GetById"))
+	user, err := s.userRepo.GetUserById(ctx, input.Id)
+	if err != nil {
+		if err != nil {
+			if err == repoerrs.ErrAlreadyExists {
+				return entity.User{}, ErrUserAlreadyExists
+			}
+			log.Error(fmt.Sprintf("Service - UserService - Create: %v", err))
+			return entity.User{}, ErrCannotCreateUser
+		}
+	}
+	return user, nil
 }
 
 //func (s *AuthService) GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error) {
