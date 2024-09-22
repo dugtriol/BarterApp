@@ -49,7 +49,7 @@ func Run(configPath string) {
 	//handlers
 	log.Info("Initializing graphql api endpoint")
 
-	graphConfig := graph.Config{Resolvers: &graph.Resolver{}}
+	graphConfig := graph.Config{Resolvers: &graph.Resolver{Log: log, Services: services}}
 	gserver := ql.NewDefaultServer(graph.NewExecutableSchema(graphConfig))
 	router := chi.NewRouter()
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
