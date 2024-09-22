@@ -5,20 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/request"
+	"github.com/dugtriol/BarterApp/internal/controller/graph/model"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo"
 	"github.com/dugtriol/BarterApp/internal/repo/repoerrs"
 	"github.com/dugtriol/BarterApp/pkg/hasher"
-	"github.com/golang-jwt/jwt"
 	log "github.com/sirupsen/logrus"
 )
-
-type TokenClaims struct {
-	jwt.StandardClaims
-	UserId int
-}
 
 type AuthService struct {
 	userRepo repo.User
@@ -66,66 +65,82 @@ func (s *AuthService) Register(ctx context.Context, input AuthRegisterInput) (en
 
 func (s *AuthService) GetById(ctx context.Context, log *slog.Logger, input UserGetByIdInput) (entity.User, error) {
 	//log.Info(fmt.Sprintf("Service - AuthService - GetById"))
-	user, err := s.userRepo.GetUserById(ctx, input.Id)
+	user, err := s.userRepo.GetById(ctx, input.Id)
 	if err != nil {
-		if err != nil {
-			if err == repoerrs.ErrAlreadyExists {
-				return entity.User{}, ErrUserAlreadyExists
-			}
-			log.Error(fmt.Sprintf("Service - UserService - Create: %v", err))
-			return entity.User{}, ErrCannotCreateUser
+		if err == repoerrs.ErrAlreadyExists {
+			return entity.User{}, ErrUserAlreadyExists
 		}
+		log.Error(fmt.Sprintf("Service - UserService - Create: %v", err))
+		return entity.User{}, ErrCannotCreateUser
 	}
 	return user, nil
 }
 
-//func (s *AuthService) GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error) {
-//	// get user from DB
-//	user, err := s.userRepo.GetUserByUsernameAndPassword(ctx, input.Username, s.passwordHasher.Hash(input.Password))
-//	if err != nil {
-//		if errors.Is(err, repoerrs.ErrNotFound) {
-//			return "", ErrUserNotFound
-//		}
-//		log.Errorf("AuthService.GenerateToken: cannot get user: %v", err)
-//		return "", ErrCannotGetUser
-//	}
-//
-//	// generate token
-//	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &TokenClaims{
-//		StandardClaims: jwt.StandardClaims{
-//			ExpiresAt: time.Now().Add(s.tokenTTL).Unix(),
-//			IssuedAt:  time.Now().Unix(),
-//		},
-//		UserId: user.Id,
-//	})
-//
-//	// sign token
-//	tokenString, err := token.SignedString([]byte(s.signKey))
-//	if err != nil {
-//		log.Errorf("AuthService.GenerateToken: cannot sign token: %v", err)
-//		return "", ErrCannotSignToken
-//	}
-//
-//	return tokenString, nil
-//}
-//
-//func (s *AuthService) ParseToken(accessToken string) (int, error) {
-//	token, err := jwt.ParseWithClaims(accessToken, &TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
-//		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-//			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-//		}
-//
-//		return []byte(s.signKey), nil
-//	})
-//
-//	if err != nil {
-//		return 0, ErrCannotParseToken
-//	}
-//
-//	claims, ok := token.Claims.(*TokenClaims)
-//	if !ok {
-//		return 0, ErrCannotParseToken
-//	}
-//
-//	return claims.UserId, nil
-//}
+func (s *AuthService) GetByEmail(ctx context.Context, log *slog.Logger, input UserGetByEmailInput) (entity.User, error) {
+	//log.Info(fmt.Sprintf("Service - AuthService - GetById"))
+	user, err := s.userRepo.GetByEmail(ctx, input.Email)
+	if err != nil {
+		if err == repoerrs.ErrAlreadyExists {
+			return entity.User{}, ErrUserAlreadyExists
+		}
+		log.Error(fmt.Sprintf("Service - UserService - Create: %v", err))
+		return entity.User{}, ErrCannotCreateUser
+	}
+	return user, nil
+}
+
+func (s *AuthService) GenToken(id string) (*model.AuthToken, error) {
+	expiredAt := time.Now().Add(time.Hour * 24 * 7) // a week
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		ExpiresAt: expiredAt.Unix(),
+		Id:        id,
+		IssuedAt:  time.Now().Unix(),
+	})
+
+	accessToken, err := token.SignedString([]byte(s.signKey))
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.AuthToken{
+		AccessToken: accessToken,
+		ExpiredAt:   expiredAt,
+	}, nil
+}
+
+var authHeaderExtractor = &request.PostExtractionFilter{
+	Extractor: request.HeaderExtractor{"Authorization"},
+	Filter:    stripBearerPrefixFromToken,
+}
+
+func stripBearerPrefixFromToken(token string) (string, error) {
+	bearer := "BEARER"
+
+	if len(token) > len(bearer) && strings.ToUpper(token[0:len(bearer)]) == bearer {
+		return token[len(bearer)+1:], nil
+	}
+
+	return token, nil
+}
+
+var authExtractor = &request.MultiExtractor{
+	authHeaderExtractor,
+	request.ArgumentExtractor{"access_token"},
+}
+
+func (s *AuthService) ParseToken(r *http.Request) (*jwt.Token, error) {
+	jwtToken, err := request.ParseFromRequest(
+		r, authExtractor, func(token *jwt.Token) (interface{}, error) {
+			t := []byte(s.signKey)
+			log.Info(fmt.Sprintf("ParseToken -  %v", t))
+			return t, nil
+		},
+	)
+	if err != nil {
+		log.Errorf("AuthService - parseToken: ", err)
+		return nil, err
+	}
+
+	return jwtToken, nil
+}
