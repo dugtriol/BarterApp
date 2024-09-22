@@ -4,24 +4,28 @@ import (
 	"context"
 	"time"
 
+	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo"
-	"github.com/dugtriol/BarterApp/pkg/hasher"
 )
 
-type AuthCreateUserInput struct {
-	Username string
+type AuthRegisterInput struct {
+	Name     string
+	Email    string
+	Phone    string
 	Password string
+	City     string
+	Mode     string
 }
 
 type AuthGenerateTokenInput struct {
-	Username string
+	Email    string
 	Password string
 }
 
 type Auth interface {
-	CreateUser(ctx context.Context, input AuthCreateUserInput) (int, error)
-	GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error)
-	ParseToken(token string) (int, error)
+	Register(ctx context.Context, input AuthRegisterInput) (entity.User, error)
+	//GenerateToken(ctx context.Context, input AuthGenerateTokenInput) (string, error)
+	//ParseToken(token string) (int, error)
 }
 
 type Services struct {
@@ -29,8 +33,8 @@ type Services struct {
 }
 
 type ServicesDependencies struct {
-	Repos  *repo.Repositories
-	Hasher hasher.PasswordHasher
+	Repos *repo.Repositories
+	//Hasher hasher.PasswordHasher
 
 	SignKey  string
 	TokenTTL time.Duration
@@ -38,6 +42,6 @@ type ServicesDependencies struct {
 
 func NewServices(deps ServicesDependencies) *Services {
 	return &Services{
-		Auth: NewAuthService(deps.Repos.User, deps.Hasher, deps.SignKey, deps.TokenTTL),
+		Auth: NewAuthService(deps.Repos.User, deps.SignKey, deps.TokenTTL),
 	}
 }
