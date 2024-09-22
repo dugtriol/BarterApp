@@ -4,11 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"os"
-	"strings"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/service"
 	"github.com/pkg/errors"
@@ -17,78 +14,53 @@ import (
 const CurrentUserKey = "currentUser"
 
 func AuthMiddleware(ctx context.Context, log *slog.Logger, authService service.Auth) func(http.Handler) http.Handler {
+	log.Info("start auth middleware")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				token, err := parseToken(r)
+				log.Info("parse token")
+				token, err := authService.ParseToken(r)
 				if err != nil {
 					next.ServeHTTP(w, r)
 					return
 				}
 
 				claims, ok := token.Claims.(jwt.MapClaims)
+				//claims, ok := token.Claims.(*service.TokenClaims)
 
+				//log.Info(fmt.Sprintf("!ok =  %v || !token.Valid = %v", !ok, !token.Valid))
+				//log.Info(fmt.Sprintf("%v", token))
 				if !ok || !token.Valid {
 					next.ServeHTTP(w, r)
 					return
 				}
-
-				user, err := authService.GetById(ctx, log, service.UserGetByIdInput{Id: claims["jti"].(string)})
+				//log.Info(fmt.Sprintf("getbyid %s", claims["UserId"]))
+				user, err := authService.GetById(ctx, log, service.UserGetByIdInput{Id: claims["UserId"].(string)})
 				if err != nil {
+					log.Error(err.Error())
 					next.ServeHTTP(w, r)
 					return
 				}
-
+				//log.Info("context.WithValue")
 				ctx := context.WithValue(r.Context(), CurrentUserKey, user)
-
 				next.ServeHTTP(w, r.WithContext(ctx))
 			},
 		)
 	}
 }
 
-var authHeaderExtractor = &request.PostExtractionFilter{
-	Extractor: request.HeaderExtractor{"Authorization"},
-	Filter:    stripBearerPrefixFromToken,
-}
-
-func stripBearerPrefixFromToken(token string) (string, error) {
-	bearer := "BEARER"
-
-	if len(token) > len(bearer) && strings.ToUpper(token[0:len(bearer)]) == bearer {
-		return token[len(bearer)+1:], nil
-	}
-
-	return token, nil
-}
-
-var authExtractor = &request.MultiExtractor{
-	authHeaderExtractor,
-	request.ArgumentExtractor{"access_token"},
-}
-
-func parseToken(r *http.Request) (*jwt.Token, error) {
-	jwtToken, err := request.ParseFromRequest(
-		r, authExtractor, func(token *jwt.Token) (interface{}, error) {
-			t := []byte(os.Getenv("JWT_SECRET"))
-			return t, nil
-		},
-	)
-
-	return jwtToken, errors.Wrap(err, "parseToken error: ")
-}
-
 func GetCurrentUserFromCTX(ctx context.Context) (*entity.User, error) {
 	errNoUserInContext := errors.New("no user in context")
-
+	//log.Info(fmt.Sprintf("ctx.Value(CurrentUserKey): %s",ctx.Value(CurrentUserKey)))
 	if ctx.Value(CurrentUserKey) == nil {
 		return nil, errNoUserInContext
 	}
 
-	user, ok := ctx.Value(CurrentUserKey).(*entity.User)
+	user, ok := ctx.Value(CurrentUserKey).(entity.User)
+	//log.Info(fmt.Sprintf("ctx.Value(CurrentUserKey).(*entity.User) %v",user))
 	if !ok || user.Id == "" {
 		return nil, errNoUserInContext
 	}
 
-	return user, nil
+	return &user, nil
 }
