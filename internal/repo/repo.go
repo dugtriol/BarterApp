@@ -13,11 +13,14 @@ type User interface {
 	GetById(ctx context.Context, id string) (entity.User, error)
 	GetByUsername(ctx context.Context, username string) (entity.User, error)
 	GetByEmail(ctx context.Context, email string) (entity.User, error)
+	GetUsers(ctx context.Context, userIDs []string) ([]*entity.User, []error)
 }
 
 type Product interface {
 	Create(ctx context.Context, product entity.Product) (entity.Product, error)
 	GetById(ctx context.Context, id string) (entity.Product, error)
+	All(ctx context.Context, limit, offset int) ([]entity.Product, error)
+	GetByUserId(ctx context.Context, limit, offset int, userId string) ([]entity.Product, error)
 }
 type Repositories struct {
 	User
