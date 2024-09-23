@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/dugtriol/BarterApp/internal/controller/graph/model"
+	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo"
 )
@@ -34,12 +34,13 @@ type UserGetByEmailInput struct {
 	Email string
 }
 
-type Auth interface {
+type User interface {
 	Register(ctx context.Context, input AuthRegisterInput) (entity.User, error)
 	GetById(ctx context.Context, log *slog.Logger, input UserGetByIdInput) (entity.User, error)
 	GetByEmail(ctx context.Context, log *slog.Logger, input UserGetByEmailInput) (entity.User, error)
 	GenToken(id string) (*model.AuthToken, error)
 	ParseToken(r *http.Request) (*jwt.Token, error)
+	GetUsers(ctx context.Context, userIDs []string) ([]*entity.User, []error)
 }
 
 type CreateProductInput struct {
@@ -57,10 +58,12 @@ type GetByIdProductInput struct {
 type Product interface {
 	Create(ctx context.Context, input CreateProductInput) (entity.Product, error)
 	GetById(ctx context.Context, log *slog.Logger, input GetByIdProductInput) (entity.Product, error)
+	All(ctx context.Context, limit, offset int) ([]entity.Product, error)
+	GetByUserId(ctx context.Context, limit, offset int, userId string) ([]*model.Product, error)
 }
 
 type Services struct {
-	Auth    Auth
+	User    User
 	Product Product
 }
 
@@ -74,7 +77,7 @@ type ServicesDependencies struct {
 
 func NewServices(deps ServicesDependencies) *Services {
 	return &Services{
-		Auth:    NewAuthService(deps.Repos.User, deps.SignKey, deps.TokenTTL),
+		User:    NewUserService(deps.Repos.User, deps.SignKey, deps.TokenTTL),
 		Product: NewProductService(deps.Repos.Product),
 	}
 }
