@@ -1,0 +1,46 @@
+type AuthToken {
+    accessToken: String!
+    expiredAt: Time!
+}
+
+type AuthResponse {
+    authToken: AuthToken!
+    user: User!
+}
+
+type AuthPayload {
+    user: User!
+    token: String!
+}
+
+input LoginInput {
+    password: String!
+    email: String!
+}
+
+input CreateUserInput {
+    name: String!
+    email: String!
+    phone: String!
+    password: String!
+    city: String!
+    mode: UserMode!
+}
+
+
+type User {
+    id: ID!
+    name: String!
+    password: String!
+    email: String!
+    phone: String!
+    city: String!
+    mode: UserMode!
+    postedProducts: [Product!]!
+}
+
+
+enum UserMode {
+    CLIENT
+    ADMIN
+}

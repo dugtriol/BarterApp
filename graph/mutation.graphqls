@@ -1,0 +1,5 @@
+type Mutation {
+    Register(input: CreateUserInput): AuthResponse!
+    Login(input: LoginInput): AuthResponse!
+    CreateProduct(input: CreateProductInput): Product!
+}

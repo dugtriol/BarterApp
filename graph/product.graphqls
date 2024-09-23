@@ -1,0 +1,27 @@
+type Product {
+    id: ID!
+    category: ProductCategory!
+    name: String!
+    description: String!
+    image: String!
+    status: ProductStatus!
+    createdBy: User!
+    createdAt: DateTime!
+}
+
+input CreateProductInput {
+    category: ProductCategory!
+    name: String!
+    description: String!
+    image: String!
+}
+
+enum ProductCategory {
+    HOME
+    CLOTHES
+}
+
+enum ProductStatus {
+    CREATED
+    SOLD
+}
