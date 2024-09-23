@@ -7,7 +7,8 @@ import (
 
 	ql "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/dugtriol/BarterApp/internal/controller/graph"
+	graph2 "github.com/dugtriol/BarterApp/graph"
+	"github.com/dugtriol/BarterApp/graph/loaders"
 	"github.com/dugtriol/BarterApp/internal/service"
 	middleware2 "github.com/dugtriol/BarterApp/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -16,8 +17,8 @@ import (
 )
 
 func NewRouter(ctx context.Context, log *slog.Logger, router *chi.Mux, services *service.Services, port string) {
-	graphConfig := graph.Config{Resolvers: &graph.Resolver{Log: log, Services: services}}
-	gserver := ql.NewDefaultServer(graph.NewExecutableSchema(graphConfig))
+	graphConfig := graph2.Config{Resolvers: &graph2.Resolver{Log: log, Services: services}}
+	gserver := ql.NewDefaultServer(graph2.NewExecutableSchema(graphConfig))
 
 	router.Use(cors.New(cors.Options{
 		AllowedOrigins:   []string{fmt.Sprintf("http://localhost:%s", port)},
@@ -26,7 +27,8 @@ func NewRouter(ctx context.Context, log *slog.Logger, router *chi.Mux, services 
 	}).Handler)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
-	router.Use(middleware2.AuthMiddleware(ctx, log, services.Auth))
+	router.Use(middleware2.AuthMiddleware(ctx, log, services.User))
+	router.Use(loaders.Middleware(log, services))
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	router.Handle("/query", gserver)
 }

@@ -13,12 +13,12 @@ import (
 
 const CurrentUserKey = "currentUser"
 
-func AuthMiddleware(ctx context.Context, log *slog.Logger, authService service.Auth) func(http.Handler) http.Handler {
-	log.Info("start auth middleware")
+func AuthMiddleware(ctx context.Context, log *slog.Logger, authService service.User) func(http.Handler) http.Handler {
+	//log.Info("start auth middleware")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				log.Info("parse token")
+				//log.Info("parse token")
 				token, err := authService.ParseToken(r)
 				if err != nil {
 					next.ServeHTTP(w, r)
@@ -34,8 +34,9 @@ func AuthMiddleware(ctx context.Context, log *slog.Logger, authService service.A
 					next.ServeHTTP(w, r)
 					return
 				}
-				//log.Info(fmt.Sprintf("getbyid %s", claims["UserId"]))
-				user, err := authService.GetById(ctx, log, service.UserGetByIdInput{Id: claims["UserId"].(string)})
+				//log.Info(fmt.Sprintf("claims %v", claims))
+				//log.Info(fmt.Sprintf("getbyid %s", claims["jti"]))
+				user, err := authService.GetById(ctx, log, service.UserGetByIdInput{Id: claims["jti"].(string)})
 				if err != nil {
 					log.Error(err.Error())
 					next.ServeHTTP(w, r)
