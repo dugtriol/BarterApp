@@ -51,9 +51,6 @@ type Mutation struct {
 type Query struct {
 }
 
-type Subscription struct {
-}
-
 type ProductCategory string
 
 const (
