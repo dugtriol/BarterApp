@@ -60,9 +60,8 @@ type Query {
     totalProducts: Int!
     allProducts(category: ProductCategory, first: Int=10, start: Int=0): [Product!]!
 
-    User(id: ID!): User!
+    User: User!
     Product(id: ID!): Product!
-
 }
 
 input CreateUserInput {

@@ -48,32 +48,10 @@ type LoginInput struct {
 type Mutation struct {
 }
 
-type Product struct {
-	ID          string          `json:"id"`
-	Category    ProductCategory `json:"category"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Image       string          `json:"image"`
-	Status      ProductStatus   `json:"status"`
-	CreatedBy   *User           `json:"createdBy"`
-	CreatedAt   string          `json:"createdAt"`
-}
-
 type Query struct {
 }
 
 type Subscription struct {
-}
-
-type User struct {
-	ID             string     `json:"id"`
-	Name           string     `json:"name"`
-	Password       string     `json:"password"`
-	Email          string     `json:"email"`
-	Phone          string     `json:"phone"`
-	City           string     `json:"city"`
-	Mode           UserMode   `json:"mode"`
-	PostedProducts []*Product `json:"postedProducts"`
 }
 
 type ProductCategory string
