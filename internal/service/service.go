@@ -60,11 +60,22 @@ type Product interface {
 	GetById(ctx context.Context, log *slog.Logger, input GetByIdProductInput) (entity.Product, error)
 	All(ctx context.Context, limit, offset int) ([]entity.Product, error)
 	GetByUserId(ctx context.Context, limit, offset int, userId string) ([]*model.Product, error)
+	FindLike(ctx context.Context, data string) ([]*model.Product, error)
+}
+
+type Favorites interface {
+	Add(ctx context.Context, input entity.Favorites) (string, error)
+	Delete(ctx context.Context, input entity.Favorites) (bool, error)
+}
+
+type Transaction interface {
 }
 
 type Services struct {
-	User    User
-	Product Product
+	User        User
+	Product     Product
+	Favorites   Favorites
+	Transaction Transaction
 }
 
 type ServicesDependencies struct {
@@ -77,7 +88,9 @@ type ServicesDependencies struct {
 
 func NewServices(deps ServicesDependencies) *Services {
 	return &Services{
-		User:    NewUserService(deps.Repos.User, deps.SignKey, deps.TokenTTL),
-		Product: NewProductService(deps.Repos.Product),
+		User:        NewUserService(deps.Repos.User, deps.SignKey, deps.TokenTTL),
+		Product:     NewProductService(deps.Repos.Product),
+		Favorites:   NewFavoritesService(deps.Repos.Favorites),
+		Transaction: NewTransactionService(deps.Repos.Transaction),
 	}
 }

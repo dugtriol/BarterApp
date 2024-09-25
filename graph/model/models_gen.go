@@ -40,6 +40,12 @@ type CreateUserInput struct {
 	Mode     UserMode `json:"mode"`
 }
 
+type Favorites struct {
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	ProductID string `json:"product_id"`
+}
+
 type LoginInput struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
@@ -54,18 +60,24 @@ type Query struct {
 type ProductCategory string
 
 const (
-	ProductCategoryHome    ProductCategory = "HOME"
-	ProductCategoryClothes ProductCategory = "CLOTHES"
+	ProductCategoryHome     ProductCategory = "HOME"
+	ProductCategoryClothes  ProductCategory = "CLOTHES"
+	ProductCategoryChildren ProductCategory = "CHILDREN"
+	ProductCategorySport    ProductCategory = "SPORT"
+	ProductCategoryOther    ProductCategory = "OTHER"
 )
 
 var AllProductCategory = []ProductCategory{
 	ProductCategoryHome,
 	ProductCategoryClothes,
+	ProductCategoryChildren,
+	ProductCategorySport,
+	ProductCategoryOther,
 }
 
 func (e ProductCategory) IsValid() bool {
 	switch e {
-	case ProductCategoryHome, ProductCategoryClothes:
+	case ProductCategoryHome, ProductCategoryClothes, ProductCategoryChildren, ProductCategorySport, ProductCategoryOther:
 		return true
 	}
 	return false
@@ -95,18 +107,20 @@ func (e ProductCategory) MarshalGQL(w io.Writer) {
 type ProductStatus string
 
 const (
-	ProductStatusCreated ProductStatus = "CREATED"
-	ProductStatusSold    ProductStatus = "SOLD"
+	ProductStatusAvailable  ProductStatus = "AVAILABLE"
+	ProductStatusExchanging ProductStatus = "EXCHANGING"
+	ProductStatusExchanged  ProductStatus = "EXCHANGED"
 )
 
 var AllProductStatus = []ProductStatus{
-	ProductStatusCreated,
-	ProductStatusSold,
+	ProductStatusAvailable,
+	ProductStatusExchanging,
+	ProductStatusExchanged,
 }
 
 func (e ProductStatus) IsValid() bool {
 	switch e {
-	case ProductStatusCreated, ProductStatusSold:
+	case ProductStatusAvailable, ProductStatusExchanging, ProductStatusExchanged:
 		return true
 	}
 	return false

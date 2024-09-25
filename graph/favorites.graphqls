@@ -1,0 +1,6 @@
+type Favorites {
+    id: ID!
+    user_id: ID!
+    product_id: ID!
+}
+

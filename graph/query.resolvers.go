@@ -135,6 +135,30 @@ func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product,
 	return &result, nil
 }
 
+// Categories is the resolver for the Categories field.
+func (r *queryResolver) Categories(ctx context.Context) ([]*model.ProductCategory, error) {
+	var res = make([]*model.ProductCategory, len(model.AllProductCategory))
+	for i, category := range model.AllProductCategory {
+		res[i] = &category
+	}
+	return res, nil
+}
+
+// FindByName is the resolver for the FindByName field.
+func (r *queryResolver) FindLike(ctx context.Context, data *string) ([]*model.Product, error) {
+	if data == nil {
+		return nil, controller.ErrNotValid
+	}
+
+	input := *data
+	output, err := r.Services.Product.FindLike(ctx, input)
+	if err != nil {
+		r.Log.Error("queryResolver - Products - r.Services.Product.FindBy: ", err)
+		return nil, err
+	}
+	return output, nil
+}
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 

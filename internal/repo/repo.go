@@ -21,15 +21,29 @@ type Product interface {
 	GetById(ctx context.Context, id string) (entity.Product, error)
 	All(ctx context.Context, limit, offset int) ([]entity.Product, error)
 	GetByUserId(ctx context.Context, limit, offset int, userId string) ([]entity.Product, error)
+	FindLike(ctx context.Context, data string) ([]entity.Product, error)
 }
+
+type Favorites interface {
+	Add(ctx context.Context, input entity.Favorites) (string, error)
+	Delete(ctx context.Context, input entity.Favorites) (bool, error)
+}
+
+type Transaction interface {
+}
+
 type Repositories struct {
 	User
 	Product
+	Favorites
+	Transaction
 }
 
 func NewRepositories(pg *postgres.Database) *Repositories {
 	return &Repositories{
-		User:    pgdb.NewUserRepo(pg),
-		Product: pgdb.NewProductRepo(pg),
+		User:        pgdb.NewUserRepo(pg),
+		Product:     pgdb.NewProductRepo(pg),
+		Favorites:   pgdb.NewFavoritesRepo(pg),
+		Transaction: pgdb.NewTransactionRepo(pg),
 	}
 }

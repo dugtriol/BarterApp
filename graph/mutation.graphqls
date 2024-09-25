@@ -2,4 +2,6 @@ type Mutation {
     Register(input: CreateUserInput): AuthResponse!
     Login(input: LoginInput): AuthResponse!
     CreateProduct(input: CreateProductInput): Product!
+    Like(product_id: ID!): String!
+    Unlike(product_id: ID!): Boolean!
 }

@@ -25,3 +25,7 @@ install-lint:
 .PHONY: lint
 lint:
 	$(GOLINT) ./...
+
+.PHONY: generate
+generate:
+	go run github.com/99designs/gqlgen generate

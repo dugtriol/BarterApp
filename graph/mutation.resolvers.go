@@ -9,6 +9,7 @@ import (
 
 	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/internal/controller"
+	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/service"
 	"github.com/dugtriol/BarterApp/pkg/hasher"
 	"github.com/dugtriol/BarterApp/pkg/middleware"
@@ -165,6 +166,50 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input *model.Creat
 		CreatedBy:   product.UserId,
 	}
 	return &result, nil
+}
+
+// Like is the resolver for the Like field.
+func (r *mutationResolver) Like(ctx context.Context, productID string) (string, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return "", controller.ErrNotAuthenticated
+	}
+
+	id, err := r.Services.Favorites.Add(
+		ctx, entity.Favorites{
+			UserId:    currentUser.Id,
+			ProductId: productID,
+		},
+	)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  r.Services.Favorites.Add")
+		return "", controller.ErrNotValid
+	}
+
+	return id, nil
+}
+
+// Unlike is the resolver for the Unlike field.
+func (r *mutationResolver) Unlike(ctx context.Context, productID string) (bool, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+
+	ok, err := r.Services.Favorites.Delete(
+		ctx, entity.Favorites{
+			UserId:    currentUser.Id,
+			ProductId: productID,
+		},
+	)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  r.Services.Favorites.Add")
+		return ok, controller.ErrNotValid
+	}
+
+	return ok, nil
 }
 
 // Mutation returns MutationResolver implementation.

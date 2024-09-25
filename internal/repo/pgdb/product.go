@@ -8,6 +8,7 @@ import (
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo/repoerrs"
 	"github.com/dugtriol/BarterApp/pkg/postgres"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
 )
@@ -160,4 +161,41 @@ func (p *ProductRepo) Pagination(ctx context.Context, sql string, args []interfa
 	rows.Close()
 
 	return output, nil
+}
+
+func (p *ProductRepo) FindLike(ctx context.Context, data string) ([]entity.Product, error) {
+	sql, args, _ := p.Builder.Select("*").
+		From(productTable).
+		Where("name LIKE ?", "%"+data+"%").
+		OrderBy("id").
+		ToSql()
+	log.Info(sql)
+	first, err := p.Pagination(ctx, sql, args)
+	if err != nil {
+		return nil, fmt.Errorf("ProductRepo - FindLike - by name - Pagination: %v", err)
+	}
+
+	_, err = uuid.Parse(data)
+	if err != nil {
+		return first, nil
+	}
+
+	sqlsecond, argssecond, _ := p.Builder.Select("*").
+		From(productTable).
+		Where("id LIKE ?", data).
+		OrderBy("id").
+		ToSql()
+	log.Info(sql)
+	second, err := p.Pagination(ctx, sqlsecond, argssecond)
+	if err != nil {
+		return nil, fmt.Errorf("ProductRepo - FindLike - by id - Pagination: %v", err)
+	}
+	result := make([]entity.Product, 0)
+	for _, product := range first {
+		result = append(result, product)
+	}
+	for _, product := range second {
+		result = append(result, product)
+	}
+	return result, nil
 }

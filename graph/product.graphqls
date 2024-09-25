@@ -19,9 +19,13 @@ input CreateProductInput {
 enum ProductCategory {
     HOME
     CLOTHES
+    CHILDREN
+    SPORT
+    OTHER
 }
 
 enum ProductStatus {
-    CREATED
-    SOLD
+    AVAILABLE
+    EXCHANGING
+    EXCHANGED
 }

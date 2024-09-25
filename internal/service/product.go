@@ -76,20 +76,36 @@ func (p *ProductService) GetByUserId(ctx context.Context, limit, offset int, use
 		log.Error(fmt.Sprintf("Service - ProductService - All: %v", err))
 		return nil, ErrCannotGetProduct
 	}
+	//log.Info(result)
+	//log.Info(len(result))
+	return p.ParseProductArray(output)
+}
 
+func (p *ProductService) FindLike(ctx context.Context, data string) ([]*model.Product, error) {
+	output, err := p.productRepo.FindLike(ctx, data)
+	if err != nil {
+		log.Error(fmt.Sprintf("Service - ProductService - All: %v", err))
+		return nil, ErrCannotGetProduct
+	}
+
+	return p.ParseProductArray(output)
+}
+
+func (p *ProductService) ParseProductArray(output []entity.Product) ([]*model.Product, error) {
+	var err error
 	result := make([]*model.Product, len(output))
 	for i, item := range output {
 		var category model.ProductCategory
 		err = category.UnmarshalGQL(item.Category)
 		if err != nil {
-			log.Error("Resolvers.Product -  category.UnmarshalGQL(product.Category): ", err)
+			log.Error("Resolvers.Product - ParseProductArray -  category.UnmarshalGQL(product.Category): ", err)
 			return nil, controller.ErrNotValid
 		}
 
 		var status model.ProductStatus
 		err = status.UnmarshalGQL(item.Status)
 		if err != nil {
-			log.Error("Resolvers.Product -  category.UnmarshalGQL(product.Status): ", err)
+			log.Error("Resolvers.Product - ParseProductArray - category.UnmarshalGQL(product.Status): ", err)
 			return nil, controller.ErrNotValid
 		}
 
@@ -107,7 +123,5 @@ func (p *ProductService) GetByUserId(ctx context.Context, limit, offset int, use
 		//log.Info(temp)
 		//result = append(result, temp)
 	}
-	//log.Info(result)
-	//log.Info(len(result))
 	return result, nil
 }
