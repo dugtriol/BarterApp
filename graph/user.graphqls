@@ -1,6 +1,6 @@
 type AuthToken {
     accessToken: String!
-    expiredAt: Time!
+    expiredAt: DateTime!
 }
 
 type AuthResponse {

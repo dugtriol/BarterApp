@@ -4,4 +4,8 @@ type Mutation {
     CreateProduct(input: CreateProductInput): Product!
     Like(product_id: ID!): String!
     Unlike(product_id: ID!): Boolean!
+    CreateTransaction(input: TransactionCreateInput): ID!
+    TransactionUpdateOngoing(transaction_id: ID!): Boolean!
+    TransactionUpdateDeclined(transaction_id: ID!): Boolean!
+    TransactionUpdateDone(transaction_id: ID!): Boolean!
 }

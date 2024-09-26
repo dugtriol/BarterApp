@@ -1,0 +1,37 @@
+type Transaction {
+    id: ID!
+    owner: ID!
+    buyer: ID!
+    product_id_owner: ID!
+    product_id_buyer: ID!
+    created_at: DateTime!
+    shipping: TransactionShipping!
+    address: String!
+    status: TransactionStatus!
+}
+
+enum TransactionShipping {
+    MEETUP
+    MAIL
+    COURIER
+}
+
+enum TransactionStatus {
+    CREATED
+    ONGOING
+    DONE
+    DECLINED
+}
+
+input TransactionCreateInput {
+    owner: ID!
+    product_id_owner: ID!
+    product_id_buyer: ID!
+    shipping: TransactionShipping!
+    address: String!
+}
+
+input ChangeStatusInput {
+    id: ID!
+    status: TransactionStatus!
+}

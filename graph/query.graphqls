@@ -5,4 +5,8 @@ type Query {
     Product(id: ID!): Product!
     Categories: [ProductCategory]
     FindLike(data: String): [Product]
+    TransactionsByOwner: [Transaction!]
+    TransactionByBuyer: [Transaction!]
+    GetByUserAvailableProducts: [Product!]
+    GetByCategoryAvailable(category: ProductCategory): [Product!]
 }

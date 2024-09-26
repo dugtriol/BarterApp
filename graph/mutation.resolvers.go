@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/dugtriol/BarterApp/graph/model"
+	"github.com/dugtriol/BarterApp/graph/scalar"
 	"github.com/dugtriol/BarterApp/internal/controller"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/service"
@@ -162,7 +163,7 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input *model.Creat
 		Description: product.Description,
 		Image:       product.Image,
 		Status:      status,
-		CreatedAt:   product.CreatedAt.String(),
+		CreatedAt:   scalar.DateTime(product.CreatedAt),
 		CreatedBy:   product.UserId,
 	}
 	return &result, nil
@@ -210,6 +211,65 @@ func (r *mutationResolver) Unlike(ctx context.Context, productID string) (bool, 
 	}
 
 	return ok, nil
+}
+
+// CreateTransaction is the resolver for the CreateTransaction field.
+func (r *mutationResolver) CreateTransaction(ctx context.Context, input *model.TransactionCreateInput) (string, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return "", controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.Create(ctx, service.CreateTransactionInput{
+		Owner:          input.Owner,
+		Buyer:          currentUser.Id,
+		ProductIdBuyer: input.ProductIDBuyer,
+		ProductIdOwner: input.ProductIDOwner,
+		Shipping:       input.Shipping.String(),
+		Address:        input.Address,
+	})
+}
+
+// TransactionUpdateOngoing is the resolver for the TransactionUpdateOngoing field.
+func (r *mutationResolver) TransactionUpdateOngoing(ctx context.Context, transactionID string) (bool, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.UpdateOngoingOrDeclined(ctx, service.UpdateStatusInput{
+		TransactionId: transactionID,
+		UserId:        currentUser.Id,
+		Status:        model.TransactionStatusOngoing.String(),
+	})
+}
+
+// TransactionUpdateDeclined is the resolver for the TransactionUpdateDeclined field.
+func (r *mutationResolver) TransactionUpdateDeclined(ctx context.Context, transactionID string) (bool, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.UpdateOngoingOrDeclined(ctx, service.UpdateStatusInput{
+		TransactionId: transactionID,
+		UserId:        currentUser.Id,
+		Status:        model.TransactionStatusDeclined.String(),
+	})
+}
+
+// TransactionUpdateDone is the resolver for the TransactionUpdateDone field.
+func (r *mutationResolver) TransactionUpdateDone(ctx context.Context, transactionID string) (bool, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.UpdateDone(ctx, service.UpdateStatusInput{
+		TransactionId: transactionID,
+		UserId:        currentUser.Id,
+		Status:        model.TransactionStatusDone.String(),
+	})
 }
 
 // Mutation returns MutationResolver implementation.

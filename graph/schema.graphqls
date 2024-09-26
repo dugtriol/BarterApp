@@ -1,4 +1,3 @@
-scalar Time
 scalar DateTime
 
 schema {
