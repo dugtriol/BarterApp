@@ -95,6 +95,9 @@ models:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+  DateTime:
+    model:
+      - github.com/dugtriol/BarterApp/graph/scalar.DateTime
   User:
     fields:
       postedProducts:
