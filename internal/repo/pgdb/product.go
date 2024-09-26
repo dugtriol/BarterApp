@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo/repoerrs"
 	"github.com/dugtriol/BarterApp/pkg/postgres"
@@ -140,7 +141,7 @@ func (p *ProductRepo) Pagination(ctx context.Context, sql string, args []interfa
 	var output []entity.Product
 	rows, err := p.Cluster.Query(ctx, sql, args...)
 	if err != nil {
-		return nil, fmt.Errorf("ProductRepo - All - r.Cluster.Query: %v", err)
+		return nil, fmt.Errorf("ProductRepo - Pagination - r.Cluster.Query: %v", err)
 	}
 	for rows.Next() {
 		var t entity.Product
@@ -154,7 +155,7 @@ func (p *ProductRepo) Pagination(ctx context.Context, sql string, args []interfa
 			&t.UserId,
 			&t.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("ProductRepo - All - rows.Scan: %v", err)
+			return nil, fmt.Errorf("ProductRepo - Pagination - rows.Scan: %v", err)
 		}
 		output = append(output, t)
 	}
@@ -198,4 +199,62 @@ func (p *ProductRepo) FindLike(ctx context.Context, data string) ([]entity.Produ
 		result = append(result, product)
 	}
 	return result, nil
+}
+
+func (p *ProductRepo) ChangeStatus(ctx context.Context, product_id, status string) (bool, error) {
+	var (
+		err error
+		tx  pgx.Tx
+	)
+	tx, err = p.Cluster.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("ProductRepo.ChangeStatus - r.Cluster.Begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	sql, args, err := p.
+		Builder.
+		Update(productTable).
+		Set("status", status).
+		Where("id = ?", product_id).
+		ToSql()
+	log.Info(sql)
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return false, fmt.Errorf("ProductRepo.ChangeStatus - tx.Exec.statusSql: %v", err)
+	}
+	//_, err = tx.Exec(ctx, sql, args...)
+	//if err != nil {
+	//	return false, fmt.Errorf("ProductRepo.ChangeStatus - tx.Exec.version: %v", err)
+	//}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return false, fmt.Errorf("ProductRepo.ChangeStatus - tx.Commit: %v", err)
+	}
+	return true, nil
+}
+
+func (p *ProductRepo) GetByCategoryAvailable(ctx context.Context, category string) ([]entity.Product, error) {
+	var status = string(model.ProductStatusAvailable)
+	sql, args, _ := p.Builder.Select("*").
+		From(productTable).
+		Where("status = ?", status).
+		Where("category = ?", category).
+		OrderBy("id").
+		ToSql()
+	log.Info(sql)
+	return p.Pagination(ctx, sql, args)
+}
+
+func (p *ProductRepo) GetByUserAvailableProducts(ctx context.Context, userId string) ([]entity.Product, error) {
+	var status = string(model.ProductStatusAvailable)
+	sql, args, _ := p.Builder.Select("*").
+		From(productTable).
+		Where("status = ?", status).
+		Where("user_id = ?", userId).
+		OrderBy("id").
+		ToSql()
+	log.Info(sql)
+	return p.Pagination(ctx, sql, args)
 }

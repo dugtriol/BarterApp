@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/dugtriol/BarterApp/graph/model"
+	"github.com/dugtriol/BarterApp/graph/scalar"
 	"github.com/dugtriol/BarterApp/internal/controller"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo"
@@ -118,10 +119,28 @@ func (p *ProductService) ParseProductArray(output []entity.Product) ([]*model.Pr
 			Image:       item.Image,
 			Status:      status,
 			CreatedBy:   item.UserId,
-			CreatedAt:   item.CreatedAt.String(),
+			CreatedAt:   scalar.DateTime(item.CreatedAt),
 		}
 		//log.Info(temp)
 		//result = append(result, temp)
 	}
 	return result, nil
+}
+
+func (p *ProductService) GetByUserAvailableProducts(ctx context.Context, userId string) ([]*model.Product, error) {
+	products, err := p.productRepo.GetByUserAvailableProducts(ctx, userId)
+	if err != nil {
+		log.Error(fmt.Sprintf("Service - ProductService - GetByUserAvailableProducts: %v", err))
+		return nil, ErrCannotGetProduct
+	}
+	return p.ParseProductArray(products)
+}
+
+func (p *ProductService) GetByCategoryAvailable(ctx context.Context, category string) ([]*model.Product, error) {
+	products, err := p.productRepo.GetByCategoryAvailable(ctx, category)
+	if err != nil {
+		log.Error(fmt.Sprintf("Service - ProductService - GetByCategoryAvailable: %v", err))
+		return nil, ErrCannotGetProduct
+	}
+	return p.ParseProductArray(products)
 }
