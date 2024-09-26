@@ -22,6 +22,9 @@ type Product interface {
 	All(ctx context.Context, limit, offset int) ([]entity.Product, error)
 	GetByUserId(ctx context.Context, limit, offset int, userId string) ([]entity.Product, error)
 	FindLike(ctx context.Context, data string) ([]entity.Product, error)
+	ChangeStatus(ctx context.Context, product_id, status string) (bool, error)
+	GetByUserAvailableProducts(ctx context.Context, userId string) ([]entity.Product, error)
+	GetByCategoryAvailable(ctx context.Context, category string) ([]entity.Product, error)
 }
 
 type Favorites interface {
@@ -30,6 +33,12 @@ type Favorites interface {
 }
 
 type Transaction interface {
+	Create(ctx context.Context, input entity.Transaction) (entity.Transaction, error)
+	GetByOwner(ctx context.Context, value string) ([]entity.Transaction, error)
+	GetByBuyer(ctx context.Context, value string) ([]entity.Transaction, error)
+	ChangeStatus(ctx context.Context, transactionID, status string) (entity.Transaction, error)
+	CheckIsOwner(ctx context.Context, userId string, transactionId string) (bool, error)
+	CheckIsBuyer(ctx context.Context, userId string, transactionId string) (bool, error)
 }
 
 type Repositories struct {
