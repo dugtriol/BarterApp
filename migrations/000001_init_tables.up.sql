@@ -57,7 +57,8 @@ DROP TYPE IF EXISTS transaction_status CASCADE;
 CREATE TYPE transaction_status AS ENUM (
     'CREATED',
     'ONGOING',
-    'DONE'
+    'DONE',
+    'DECLINED'
     );
 
 DROP TYPE IF EXISTS shipping_method CASCADE;
