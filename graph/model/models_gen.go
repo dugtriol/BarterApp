@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"time"
+
+	"github.com/dugtriol/BarterApp/graph/scalar"
 )
 
 type AuthPayload struct {
@@ -20,8 +21,13 @@ type AuthResponse struct {
 }
 
 type AuthToken struct {
-	AccessToken string    `json:"accessToken"`
-	ExpiredAt   time.Time `json:"expiredAt"`
+	AccessToken string          `json:"accessToken"`
+	ExpiredAt   scalar.DateTime `json:"expiredAt"`
+}
+
+type ChangeStatusInput struct {
+	ID     string            `json:"id"`
+	Status TransactionStatus `json:"status"`
 }
 
 type CreateProductInput struct {
@@ -55,6 +61,26 @@ type Mutation struct {
 }
 
 type Query struct {
+}
+
+type Transaction struct {
+	ID             string              `json:"id"`
+	Owner          string              `json:"owner"`
+	Buyer          string              `json:"buyer"`
+	ProductIDOwner string              `json:"product_id_owner"`
+	ProductIDBuyer string              `json:"product_id_buyer"`
+	CreatedAt      scalar.DateTime     `json:"created_at"`
+	Shipping       TransactionShipping `json:"shipping"`
+	Address        string              `json:"address"`
+	Status         TransactionStatus   `json:"status"`
+}
+
+type TransactionCreateInput struct {
+	Owner          string              `json:"owner"`
+	ProductIDOwner string              `json:"product_id_owner"`
+	ProductIDBuyer string              `json:"product_id_buyer"`
+	Shipping       TransactionShipping `json:"shipping"`
+	Address        string              `json:"address"`
 }
 
 type ProductCategory string
@@ -144,6 +170,94 @@ func (e *ProductStatus) UnmarshalGQL(v interface{}) error {
 }
 
 func (e ProductStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type TransactionShipping string
+
+const (
+	TransactionShippingMeetup  TransactionShipping = "MEETUP"
+	TransactionShippingMail    TransactionShipping = "MAIL"
+	TransactionShippingCourier TransactionShipping = "COURIER"
+)
+
+var AllTransactionShipping = []TransactionShipping{
+	TransactionShippingMeetup,
+	TransactionShippingMail,
+	TransactionShippingCourier,
+}
+
+func (e TransactionShipping) IsValid() bool {
+	switch e {
+	case TransactionShippingMeetup, TransactionShippingMail, TransactionShippingCourier:
+		return true
+	}
+	return false
+}
+
+func (e TransactionShipping) String() string {
+	return string(e)
+}
+
+func (e *TransactionShipping) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TransactionShipping(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TransactionShipping", str)
+	}
+	return nil
+}
+
+func (e TransactionShipping) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type TransactionStatus string
+
+const (
+	TransactionStatusCreated  TransactionStatus = "CREATED"
+	TransactionStatusOngoing  TransactionStatus = "ONGOING"
+	TransactionStatusDone     TransactionStatus = "DONE"
+	TransactionStatusDeclined TransactionStatus = "DECLINED"
+)
+
+var AllTransactionStatus = []TransactionStatus{
+	TransactionStatusCreated,
+	TransactionStatusOngoing,
+	TransactionStatusDone,
+	TransactionStatusDeclined,
+}
+
+func (e TransactionStatus) IsValid() bool {
+	switch e {
+	case TransactionStatusCreated, TransactionStatusOngoing, TransactionStatusDone, TransactionStatusDeclined:
+		return true
+	}
+	return false
+}
+
+func (e TransactionStatus) String() string {
+	return string(e)
+}
+
+func (e *TransactionStatus) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TransactionStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TransactionStatus", str)
+	}
+	return nil
+}
+
+func (e TransactionStatus) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

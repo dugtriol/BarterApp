@@ -14,4 +14,8 @@ var (
 	ErrProductAlreadyExists = fmt.Errorf("product already exists")
 	ErrCannotCreateProduct  = fmt.Errorf("cannot create product")
 	ErrCannotGetProduct     = fmt.Errorf("cannot get product")
+
+	ErrlreadyExists = fmt.Errorf("already exists")
+	ErrCannotCreate = fmt.Errorf("cannot create")
+	ErrCannotGet    = fmt.Errorf("cannot get")
 )
