@@ -61,6 +61,8 @@ type Product interface {
 	All(ctx context.Context, limit, offset int) ([]entity.Product, error)
 	GetByUserId(ctx context.Context, limit, offset int, userId string) ([]*model.Product, error)
 	FindLike(ctx context.Context, data string) ([]*model.Product, error)
+	GetByUserAvailableProducts(ctx context.Context, userId string) ([]*model.Product, error)
+	GetByCategoryAvailable(ctx context.Context, category string) ([]*model.Product, error)
 }
 
 type Favorites interface {
@@ -69,6 +71,11 @@ type Favorites interface {
 }
 
 type Transaction interface {
+	Create(ctx context.Context, input CreateTransactionInput) (string, error)
+	UpdateOngoingOrDeclined(ctx context.Context, input UpdateStatusInput) (bool, error)
+	GetByBuyer(ctx context.Context, buyer_id string) ([]*model.Transaction, error)
+	GetByOwner(ctx context.Context, owner_id string) ([]*model.Transaction, error)
+	UpdateDone(ctx context.Context, input UpdateStatusInput) (bool, error)
 }
 
 type Services struct {
@@ -91,6 +98,6 @@ func NewServices(deps ServicesDependencies) *Services {
 		User:        NewUserService(deps.Repos.User, deps.SignKey, deps.TokenTTL),
 		Product:     NewProductService(deps.Repos.Product),
 		Favorites:   NewFavoritesService(deps.Repos.Favorites),
-		Transaction: NewTransactionService(deps.Repos.Transaction),
+		Transaction: NewTransactionService(deps.Repos.Transaction, deps.Repos.Product),
 	}
 }

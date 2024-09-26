@@ -12,6 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/dugtriol/BarterApp/graph/model"
+	"github.com/dugtriol/BarterApp/graph/scalar"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo"
 	"github.com/dugtriol/BarterApp/internal/repo/repoerrs"
@@ -103,9 +104,10 @@ func (s *UserService) GenToken(id string) (*model.AuthToken, error) {
 		return nil, err
 	}
 
+	//at.MarshalGQL(expiredAt)
 	return &model.AuthToken{
 		AccessToken: accessToken,
-		ExpiredAt:   expiredAt,
+		ExpiredAt:   scalar.DateTime(expiredAt),
 	}, nil
 }
 
