@@ -7,6 +7,7 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/dugtriol/BarterApp/graph/scalar"
 )
 
@@ -34,7 +35,7 @@ type CreateProductInput struct {
 	Category    ProductCategory `json:"category"`
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
-	Image       string          `json:"image"`
+	Image       graphql.Upload  `json:"image"`
 }
 
 type CreateUserInput struct {
@@ -46,10 +47,32 @@ type CreateUserInput struct {
 	Mode     UserMode `json:"mode"`
 }
 
+type EditProductInput struct {
+	ID          string          `json:"id"`
+	Category    ProductCategory `json:"category"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Image       *graphql.Upload `json:"image,omitempty"`
+}
+
+type EditProfileInput struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Phone string `json:"phone"`
+	City  string `json:"city"`
+}
+
 type Favorites struct {
 	ID        string `json:"id"`
 	UserID    string `json:"user_id"`
 	ProductID string `json:"product_id"`
+}
+
+type File struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Content     string `json:"content"`
+	ContentType string `json:"contentType"`
 }
 
 type LoginInput struct {
@@ -57,10 +80,19 @@ type LoginInput struct {
 	Email    string `json:"email"`
 }
 
+type Message struct {
+	ID      int    `json:"id"`
+	User    string `json:"user"`
+	Content string `json:"content"`
+}
+
 type Mutation struct {
 }
 
 type Query struct {
+}
+
+type Subscription struct {
 }
 
 type Transaction struct {
@@ -83,9 +115,15 @@ type TransactionCreateInput struct {
 	Address        string              `json:"address"`
 }
 
+type UploadFile struct {
+	ID   int            `json:"id"`
+	File graphql.Upload `json:"file"`
+}
+
 type ProductCategory string
 
 const (
+	ProductCategoryDefault  ProductCategory = "DEFAULT"
 	ProductCategoryHome     ProductCategory = "HOME"
 	ProductCategoryClothes  ProductCategory = "CLOTHES"
 	ProductCategoryChildren ProductCategory = "CHILDREN"
@@ -94,6 +132,7 @@ const (
 )
 
 var AllProductCategory = []ProductCategory{
+	ProductCategoryDefault,
 	ProductCategoryHome,
 	ProductCategoryClothes,
 	ProductCategoryChildren,
@@ -103,7 +142,7 @@ var AllProductCategory = []ProductCategory{
 
 func (e ProductCategory) IsValid() bool {
 	switch e {
-	case ProductCategoryHome, ProductCategoryClothes, ProductCategoryChildren, ProductCategorySport, ProductCategoryOther:
+	case ProductCategoryDefault, ProductCategoryHome, ProductCategoryClothes, ProductCategoryChildren, ProductCategorySport, ProductCategoryOther:
 		return true
 	}
 	return false
@@ -127,6 +166,49 @@ func (e *ProductCategory) UnmarshalGQL(v interface{}) error {
 }
 
 func (e ProductCategory) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type ProductSort string
+
+const (
+	ProductSortDefault  ProductSort = "DEFAULT"
+	ProductSortDate     ProductSort = "DATE"
+	ProductSortDistance ProductSort = "DISTANCE"
+)
+
+var AllProductSort = []ProductSort{
+	ProductSortDefault,
+	ProductSortDate,
+	ProductSortDistance,
+}
+
+func (e ProductSort) IsValid() bool {
+	switch e {
+	case ProductSortDefault, ProductSortDate, ProductSortDistance:
+		return true
+	}
+	return false
+}
+
+func (e ProductSort) String() string {
+	return string(e)
+}
+
+func (e *ProductSort) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ProductSort(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ProductSort", str)
+	}
+	return nil
+}
+
+func (e ProductSort) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

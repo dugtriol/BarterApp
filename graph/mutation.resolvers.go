@@ -6,7 +6,9 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/graph/scalar"
 	"github.com/dugtriol/BarterApp/internal/controller"
@@ -14,6 +16,7 @@ import (
 	"github.com/dugtriol/BarterApp/internal/service"
 	"github.com/dugtriol/BarterApp/pkg/hasher"
 	"github.com/dugtriol/BarterApp/pkg/middleware"
+	log "github.com/sirupsen/logrus"
 )
 
 // Register is the resolver for the Register field.
@@ -128,12 +131,17 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input *model.Creat
 		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
 		return nil, controller.ErrNotAuthenticated
 	}
+	pathImage, err := r.SingleUpload(ctx, input.Image)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  r.SingleUpload(ctx, input.Image): ", err)
+		return nil, controller.ErrNotCreated
+	}
 	product, err := r.Services.Product.Create(
 		ctx, service.CreateProductInput{
 			Category:    input.Category.String(),
 			Name:        input.Name,
 			Description: input.Description,
-			Image:       input.Image,
+			Image:       pathImage,
 			UserId:      currentUser.Id,
 		},
 	)
@@ -166,6 +174,7 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input *model.Creat
 		CreatedAt:   scalar.DateTime(product.CreatedAt),
 		CreatedBy:   product.UserId,
 	}
+	log.Info(fmt.Sprintf("product: %v", result))
 	return &result, nil
 }
 
@@ -270,6 +279,140 @@ func (r *mutationResolver) TransactionUpdateDone(ctx context.Context, transactio
 		UserId:        currentUser.Id,
 		Status:        model.TransactionStatusDone.String(),
 	})
+}
+
+// PostMessage is the resolver for the postMessage field.
+func (r *mutationResolver) PostMessage(ctx context.Context, user string, content string) (int, error) {
+	// Construct the newly sent message and append it to the existing messages
+	msg := model.Message{
+		ID:      len(r.ChatMessages),
+		User:    user,
+		Content: content,
+	}
+	r.ChatMessages = append(r.ChatMessages, &msg)
+
+	r.mu.Lock()
+	// Notify all active subscriptions that a new message has been posted by posted. In this case we push the now
+	// updated ChatMessages array to all clients that care about it.
+	for _, observer := range r.ChatObservers {
+		observer <- r.ChatMessages
+	}
+	r.mu.Unlock()
+	return msg.ID, nil
+}
+
+// SingleUpload is the resolver for the singleUpload field.
+func (r *mutationResolver) SingleUpload(ctx context.Context, file graphql.Upload) (string, error) {
+	path, err := r.Services.File.Upload(ctx, file)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload file: %w", err)
+	}
+	return path, nil
+}
+
+// EditProduct is the resolver for the editProduct field.
+func (r *mutationResolver) EditProduct(ctx context.Context, input model.EditProductInput) (bool, error) {
+	_, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+
+	path, err := r.Services.Product.IsImageChanged(ctx, input.ID)
+	if err != nil {
+		r.Log.Error("mutationResolver - EditProduct - r.Services.Product.IsImageChanged: ", err)
+		return false, fmt.Errorf("failed to get image: %w", err)
+	}
+
+	if input.Image != nil {
+		ok, err := r.Services.File.Delete(ctx, path)
+		if err != nil || !ok {
+			r.Log.Error("mutationResolver - DeleteProduct -  r.Services.File.Delete: ", err)
+			return false, fmt.Errorf("failed to delete image: %w", err)
+		}
+
+		file := &graphql.Upload{
+			File:        input.Image.File,
+			Filename:    input.Image.Filename,
+			Size:        input.Image.Size,
+			ContentType: input.Image.ContentType,
+		}
+
+		path, err = r.SingleUpload(ctx, *file)
+		if err != nil {
+			r.Log.Error("mutationResolver - EditProduct -  r.SingleUpload: ", err)
+			return false, fmt.Errorf("failed to upload file: %w", err)
+		}
+	}
+
+	ok, err := r.Services.Product.EditProduct(
+		ctx, service.EditProductInput{
+			Id:          input.ID,
+			Category:    input.Category.String(),
+			Name:        input.Name,
+			Description: input.Description,
+			Image:       path,
+		},
+	)
+	if err != nil || !ok {
+		r.Log.Error("mutationResolver - EditProduct -  r.Services.Product.EditProduct: ", err)
+		return false, fmt.Errorf("failed to edit product: %w", err)
+	}
+
+	return ok, nil
+}
+
+// DeleteProduct is the resolver for the deleteProduct field.
+func (r *mutationResolver) DeleteProduct(ctx context.Context, id string) (bool, error) {
+	_, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+
+	deleted, err := r.Services.Favorites.DeleteIfProductDeleted(ctx, id)
+
+	if err != nil || !deleted {
+		r.Log.Error("mutationResolver - DeleteProduct - r.Services.Favorites.DeleteIfProductDeleted: ", err)
+		return false, fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	image, err := r.Services.Product.Delete(ctx, id)
+	if err != nil {
+		r.Log.Error("mutationResolver - DeleteProduct - r.Services.Product.Delete: ", err)
+		return false, fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	ok, err := r.Services.File.Delete(ctx, image)
+	if err != nil {
+		r.Log.Error("mutationResolver - DeleteProduct -  r.Services.File.Delete: ", err)
+		return false, fmt.Errorf("failed to delete image: %w", err)
+	}
+	return ok, nil
+}
+
+// EditProfile is the resolver for the editProfile field.
+func (r *mutationResolver) EditProfile(ctx context.Context, input model.EditProfileInput) (bool, error) {
+	currentUser, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
+		return false, controller.ErrNotAuthenticated
+	}
+
+	ok, err := r.Services.User.UpdateProfile(
+		ctx, service.UserEditProfile{
+			Id:    currentUser.Id,
+			Name:  input.Name,
+			Email: input.Email,
+			Phone: input.Phone,
+			City:  input.City,
+		},
+	)
+	if err != nil || !ok {
+		r.Log.Error("mutationResolver - EditProfile -  r.Services.User.UpdateProfile: ", err)
+		return false, fmt.Errorf("failed to edit profile: %w", err)
+	}
+	return ok, nil
 }
 
 // Mutation returns MutationResolver implementation.

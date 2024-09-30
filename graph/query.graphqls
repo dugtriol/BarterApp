@@ -1,12 +1,16 @@
 type Query {
-    Products(first: Int=10, start: Int=0): [Product!]
-    ProductsByCategory(category: ProductCategory, first: Int=10, start: Int=0): [Product!]!
-    User: User!
-    Product(id: ID!): Product!
-    Categories: [ProductCategory]
-    FindLike(data: String): [Product]
-    TransactionsByOwner: [Transaction!]
-    TransactionByBuyer: [Transaction!]
-    GetByUserAvailableProducts: [Product!]
-    GetByCategoryAvailable(category: ProductCategory): [Product!]
+    Products(category: ProductCategory!=DEFAULT, search: String!="", sort: ProductSort!=DEFAULT, first: Int!=10, start: Int!=0): [Product!] @auth
+    User: User! @auth
+    Product(id: ID!): Product! @auth
+    Categories: [ProductCategory] @auth
+    TransactionsByOwner: [Transaction!] @auth
+    TransactionByBuyer: [Transaction!] @auth
+    GetByUserAvailableProducts: [Product!] @auth
+    GetByCategoryAvailable(category: ProductCategory): [Product!] @auth
+    GetOngoing: [Transaction!] @auth
+    GetCreated: [Transaction!] @auth
+    GetArchive: [Transaction!] @auth
+    messages: [Message!] @auth
+    getLikes: [Favorites!] @auth
+    getFavoritesProducts: [Product!] @auth
 }

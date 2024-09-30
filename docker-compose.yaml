@@ -26,6 +26,8 @@ services:
       - postgres
     env_file:
       - .env
+    volumes:
+      - ~/.aws:/root/.aws:ro
 
 volumes:
   postgres_data:

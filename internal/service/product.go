@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"log/slog"
 
 	"github.com/dugtriol/BarterApp/graph/model"
@@ -82,13 +81,38 @@ func (p *ProductService) GetByUserId(ctx context.Context, limit, offset int, use
 	return p.ParseProductArray(output)
 }
 
-func (p *ProductService) FindLike(ctx context.Context, data string) ([]*model.Product, error) {
-	output, err := p.productRepo.FindLike(ctx, data)
+func (p *ProductService) FindLike(ctx context.Context, category model.ProductCategory, search string, sort model.ProductSort) ([]*model.Product, error) {
+	var sortLine string
+	switch sort {
+	case model.ProductSortDate:
+		sortLine = "created_at"
+	case model.ProductSortDistance:
+		sortLine = "disctanse"
+	default:
+		sortLine = ""
+	}
+
+	var categoryLine string
+	if category == model.ProductCategoryDefault {
+		categoryLine = ""
+	} else {
+		categoryLine = category.String()
+	}
+
+	output, err := p.productRepo.FindLike(ctx, search, categoryLine, sortLine)
 	if err != nil {
-		log.Error(fmt.Sprintf("Service - ProductService - All: %v", err))
+		log.Error(fmt.Sprintf("Service - ProductService - FindLike: %v", err))
 		return nil, ErrCannotGetProduct
 	}
 
+	return p.ParseProductArray(output)
+}
+func (p *ProductService) GetLikedProductsByUserId(ctx context.Context, userId string) ([]*model.Product, error) {
+	output, err := p.productRepo.GetLikedProductsByUserId(ctx, userId)
+	if err != nil {
+		log.Error("FavoritesService - GetFavoritesByUserId -  p.favoritesRepo.GetFavoritesByUserId: ", err)
+		return nil, controller.ErrNotValid
+	}
 	return p.ParseProductArray(output)
 }
 
@@ -143,4 +167,49 @@ func (p *ProductService) GetByCategoryAvailable(ctx context.Context, category st
 		return nil, ErrCannotGetProduct
 	}
 	return p.ParseProductArray(products)
+}
+
+type EditProductInput struct {
+	Id          string
+	Category    string
+	Name        string
+	Description string
+	Image       string
+}
+
+func (p *ProductService) EditProduct(ctx context.Context, input EditProductInput) (bool, error) {
+	ok, err := p.productRepo.EditProduct(
+		ctx, entity.Product{
+			Id:          input.Id,
+			Name:        input.Name,
+			Description: input.Description,
+			Image:       input.Image,
+			Category:    input.Category,
+		},
+	)
+	if err != nil || !ok {
+		log.Error(fmt.Sprintf("Service - ProductService - EditProduct: %v", err))
+		return false, ErrCannotUpdateUser
+	}
+
+	return ok, nil
+}
+
+func (p *ProductService) Delete(ctx context.Context, id string) (string, error) {
+	image, err := p.productRepo.Delete(ctx, id)
+	if err != nil {
+		log.Error(fmt.Sprintf("Service - ProductService - Delete: %v", err))
+		return "", ErrCannotUpdateUser
+	}
+
+	return image, nil
+}
+
+func (p *ProductService) IsImageChanged(ctx context.Context, product_id string) (string, error) {
+	image, err := p.productRepo.GetImage(ctx, product_id)
+	if err != nil {
+		log.Error(fmt.Sprintf("Service - IsImageChanged -  p.productRepo.GetImage: %v", err))
+		return "", ErrCannotGet
+	}
+	return image, nil
 }

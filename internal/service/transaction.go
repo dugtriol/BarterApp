@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/graph/scalar"
@@ -50,7 +51,7 @@ func (p *TransactionService) Create(ctx context.Context, input CreateTransaction
 	output, err := p.transactionRepo.Create(ctx, transaction)
 	if err != nil {
 		if errors.Is(err, repoerrs.ErrAlreadyExists) {
-			return "", ErrlreadyExists
+			return "", ErrAlreadyExists
 		}
 		log.Error("TransactionService.Create - p.transactionRepo.Create: %v", err)
 		return "", ErrCannotCreate
@@ -163,9 +164,10 @@ func (p *TransactionService) ParseTransactionArray(output []entity.Transaction) 
 			Address:        item.Address,
 			Status:         status,
 		}
-		//log.Info(temp)
+		//log.Info(result[i])
 		//result = append(result, temp)
 	}
+	//log.Info(result)
 	return result, nil
 }
 
@@ -215,4 +217,34 @@ func (p *TransactionService) GetStatus(status string) model.ProductStatus {
 		res = model.ProductStatusAvailable
 	}
 	return res
+}
+
+func (p *TransactionService) GetOngoing(ctx context.Context, buyer_id string) ([]*model.Transaction, error) {
+	output, err := p.transactionRepo.GetOngoing(ctx, buyer_id)
+	log.Info(fmt.Sprintf("GetOngoing - %v", output))
+	if err != nil {
+		log.Error("TransactionService - p.transactionRepo.GetOngoing: ", err)
+		return nil, controller.ErrNotFound
+	}
+	return p.ParseTransactionArray(output)
+}
+
+func (p *TransactionService) GetCreated(ctx context.Context, owner_id string) ([]*model.Transaction, error) {
+	output, err := p.transactionRepo.GetCreated(ctx, owner_id)
+	log.Info(fmt.Sprintf("GetCreated - %v", output))
+	if err != nil {
+		log.Error("TransactionService - p.transactionRepo.GetCreated: ", err)
+		return nil, controller.ErrNotFound
+	}
+	return p.ParseTransactionArray(output)
+}
+
+func (p *TransactionService) GetArchive(ctx context.Context, id string) ([]*model.Transaction, error) {
+	output, err := p.transactionRepo.GetArchive(ctx, id)
+	log.Info(fmt.Sprintf("GetArchive - %v", output))
+	if err != nil {
+		log.Error("TransactionService - p.transactionRepo.GetArchive: ", err)
+		return nil, controller.ErrNotFound
+	}
+	return p.ParseTransactionArray(output)
 }

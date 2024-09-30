@@ -1,11 +1,16 @@
 type Mutation {
     Register(input: CreateUserInput): AuthResponse!
     Login(input: LoginInput): AuthResponse!
-    CreateProduct(input: CreateProductInput): Product!
-    Like(product_id: ID!): String!
-    Unlike(product_id: ID!): Boolean!
-    CreateTransaction(input: TransactionCreateInput): ID!
-    TransactionUpdateOngoing(transaction_id: ID!): Boolean!
-    TransactionUpdateDeclined(transaction_id: ID!): Boolean!
-    TransactionUpdateDone(transaction_id: ID!): Boolean!
+    CreateProduct(input: CreateProductInput): Product! @auth
+    Like(product_id: ID!): String! @auth
+    Unlike(product_id: ID!): Boolean! @auth
+    CreateTransaction(input: TransactionCreateInput): ID! @auth
+    TransactionUpdateOngoing(transaction_id: ID!): Boolean! @auth
+    TransactionUpdateDeclined(transaction_id: ID!): Boolean! @auth
+    TransactionUpdateDone(transaction_id: ID!): Boolean! @auth
+    postMessage(user: String!, content: String!): Int! @auth
+    singleUpload(file: Upload!): String! @auth
+    editProduct(input: EditProductInput!): Boolean! @auth
+    deleteProduct(id: ID!): Boolean! @auth
+    editProfile(input: EditProfileInput!): Boolean! @auth
 }

@@ -6,7 +6,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/graph/scalar"
@@ -16,63 +15,19 @@ import (
 )
 
 // Products is the resolver for the Products field.
-func (r *queryResolver) Products(ctx context.Context, first *int, start *int) ([]*model.Product, error) {
+func (r *queryResolver) Products(ctx context.Context, category model.ProductCategory, search string, sort model.ProductSort, first int, start int) ([]*model.Product, error) {
 	_, err := middleware.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
 		return nil, controller.ErrNotAuthenticated
 	}
 
-	if first == nil || start == nil {
-		return nil, controller.ErrNotValid
-	}
-
-	limit := *first
-	offset := *start
-	output, err := r.Services.Product.All(ctx, limit, offset)
+	result, err := r.Services.Product.FindLike(ctx, category, search, sort)
 	if err != nil {
 		r.Log.Error("queryResolver - Products - r.Services.Product.All: ", err)
 		return nil, err
 	}
-
-	result := make([]*model.Product, len(output))
-	for i, item := range output {
-		var category model.ProductCategory
-		err = category.UnmarshalGQL(item.Category)
-		if err != nil {
-			r.Log.Error("Resolvers.Product -  category.UnmarshalGQL(product.Category): ", err)
-			return nil, controller.ErrNotValid
-		}
-
-		var status model.ProductStatus
-		err = status.UnmarshalGQL(item.Status)
-		if err != nil {
-			r.Log.Error("Resolvers.Product -  category.UnmarshalGQL(product.Status): ", err)
-			return nil, controller.ErrNotValid
-		}
-
-		//var temp *model.Product
-		result[i] = &model.Product{
-			ID:          item.Id,
-			Category:    category,
-			Name:        item.Name,
-			Description: item.Description,
-			Image:       item.Image,
-			Status:      status,
-			CreatedBy:   item.UserId,
-			CreatedAt:   scalar.DateTime(item.CreatedAt),
-		}
-		//log.Info(temp)
-		//result = append(result, temp)
-	}
-	//log.Info(result)
-	//log.Info(len(result))
 	return result, nil
-}
-
-// ProductsByCategory is the resolver for the ProductsByCategory field.
-func (r *queryResolver) ProductsByCategory(ctx context.Context, category *model.ProductCategory, first *int, start *int) ([]*model.Product, error) {
-	panic(fmt.Errorf("not implemented: ProductsByCategory - ProductsByCategory"))
 }
 
 // User is the resolver for the User field.
@@ -82,12 +37,6 @@ func (r *queryResolver) User(ctx context.Context) (*model.User, error) {
 		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
 		return nil, controller.ErrNotAuthenticated
 	}
-
-	//output, err := r.Services.User.GetById(ctx, r.Log, service.UserGetByIdInput{Id: id})
-	//if err != nil {
-	//	r.Log.Error("Resolvers.User -  r.Services.User.GetById: ", err)
-	//	return nil, controller.ErrNotFound
-	//}
 
 	var mode model.UserMode
 	err = mode.UnmarshalGQL(output.Mode)
@@ -144,6 +93,7 @@ func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product,
 		Image:       product.Image,
 		Status:      status,
 		CreatedAt:   scalar.DateTime(product.CreatedAt),
+		CreatedBy:   product.UserId,
 	}
 	return &result, nil
 }
@@ -160,27 +110,6 @@ func (r *queryResolver) Categories(ctx context.Context) ([]*model.ProductCategor
 		res[i] = &category
 	}
 	return res, nil
-}
-
-// FindByName is the resolver for the FindByName field.
-func (r *queryResolver) FindLike(ctx context.Context, data *string) ([]*model.Product, error) {
-	_, err := middleware.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		r.Log.Error("Resolvers.Product -  middleware.GetCurrentUserFromCTX: no user in context")
-		return nil, controller.ErrNotAuthenticated
-	}
-
-	if data == nil {
-		return nil, controller.ErrNotValid
-	}
-
-	input := *data
-	output, err := r.Services.Product.FindLike(ctx, input)
-	if err != nil {
-		r.Log.Error("queryResolver - Products - r.Services.Product.FindBy: ", err)
-		return nil, err
-	}
-	return output, nil
 }
 
 // TransactionsByOwner is the resolver for the TransactionsByOwner field.
@@ -221,6 +150,71 @@ func (r *queryResolver) GetByCategoryAvailable(ctx context.Context, category *mo
 		return nil, controller.ErrNotAuthenticated
 	}
 	return r.Services.Product.GetByCategoryAvailable(ctx, category.String())
+}
+
+// GetOngoing is the resolver for the GetOngoing field.
+func (r *queryResolver) GetOngoing(ctx context.Context) ([]*model.Transaction, error) {
+	current, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return nil, controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.GetOngoing(ctx, current.Id)
+}
+
+// GetCreated is the resolver for the GetCreated field.
+func (r *queryResolver) GetCreated(ctx context.Context) ([]*model.Transaction, error) {
+	current, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return nil, controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.GetCreated(ctx, current.Id)
+}
+
+// GetArchive is the resolver for the GetArchive field.
+func (r *queryResolver) GetArchive(ctx context.Context) ([]*model.Transaction, error) {
+	current, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return nil, controller.ErrNotAuthenticated
+	}
+	return r.Services.Transaction.GetArchive(ctx, current.Id)
+}
+
+// Messages is the resolver for the messages field.
+func (r *queryResolver) Messages(ctx context.Context) ([]*model.Message, error) {
+	return r.ChatMessages, nil
+}
+
+// GetLikes is the resolver for the getLikes field.
+func (r *queryResolver) GetLikes(ctx context.Context) ([]*model.Favorites, error) {
+	current, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return nil, controller.ErrNotAuthenticated
+	}
+	output, err := r.Services.Favorites.GetFavoritesByUserId(ctx, current.Id)
+	if err != nil {
+		r.Log.Error("queryResolver -  GetLikes - ", err)
+		return nil, controller.ErrNotFound
+	}
+	return output, nil
+}
+
+// GetFavoritesProducts is the resolver for the getFavoritesProducts field.
+func (r *queryResolver) GetFavoritesProducts(ctx context.Context) ([]*model.Product, error) {
+	current, err := middleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		r.Log.Error("Resolvers.Transaction -  middleware.GetCurrentUserFromCTX: no user in context")
+		return nil, controller.ErrNotAuthenticated
+	}
+	output, err := r.Services.Product.GetLikedProductsByUserId(ctx, current.Id)
+	if err != nil {
+		r.Log.Error("queryResolver -  GetFavoritesProducts - ", err)
+		return nil, controller.ErrNotFound
+	}
+	return output, nil
 }
 
 // Query returns QueryResolver implementation.

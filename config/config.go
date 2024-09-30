@@ -14,6 +14,7 @@ type (
 		Database `yaml:"database"`
 		Log      `yaml:"log"`
 		Hasher   `yaml:"hasher"`
+		S3Data   `yaml:"s3"`
 	}
 
 	HTTP struct {
@@ -34,6 +35,12 @@ type (
 
 	Hasher struct {
 		Salt string `env-required:"true" env:"HASHER_SALT"`
+	}
+
+	S3Data struct {
+		BucketName       string `env-required:"true" yaml:"port" env:"BUCKET_NAME"`
+		Region           string `env-required:"true" yaml:"port" env:"REGION"`
+		EndpointResolver string `env-required:"true" yaml:"port" env:"ENDPOINT_RESOLVER"`
 	}
 )
 

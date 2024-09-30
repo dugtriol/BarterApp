@@ -1,7 +1,8 @@
 scalar DateTime
+directive @auth on FIELD_DEFINITION
 
 schema {
     query: Query
     mutation: Mutation
-#    subscription: Subscription
+    subscription: Subscription
 }

@@ -131,11 +131,12 @@ var authExtractor = &request.MultiExtractor{
 	request.ArgumentExtractor{"access_token"},
 }
 
-func (s *UserService) ParseToken(r *http.Request) (*jwt.Token, error) {
+func (s *UserService) ParseTokenFromRequest(r *http.Request) (*jwt.Token, error) {
+
 	jwtToken, err := request.ParseFromRequest(
 		r, authExtractor, func(token *jwt.Token) (interface{}, error) {
 			t := []byte(s.signKey)
-			//log.Info(fmt.Sprintf("ParseToken -  %v", t))
+			log.Info(fmt.Sprintf("ParseTokenFromRequest -  %v", t))
 			return t, nil
 		},
 	)
@@ -147,6 +148,58 @@ func (s *UserService) ParseToken(r *http.Request) (*jwt.Token, error) {
 	return jwtToken, nil
 }
 
+func extractToken(authHeader string) (string, error) {
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", fmt.Errorf("invalid token format")
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	return token, nil
+}
+
+func (s *UserService) ParseToken(token string) (*jwt.Token, error) {
+	data := jwt.MapClaims{}
+	token, err := extractToken(token)
+	if err != nil {
+		log.Info(fmt.Sprintf("extractToken(token) - "), token)
+		return nil, nil
+	}
+
+	parseToken, err := jwt.ParseWithClaims(
+		token, data, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+			return []byte(s.signKey), nil
+		},
+	)
+	if err != nil {
+		log.Info(fmt.Sprintf("jwt.ParseWithClaims error parseToken - %v, claims - %v", parseToken, parseToken.Claims.(jwt.MapClaims)))
+		log.Errorf("UserService - parseToken: ", err)
+		return nil, err
+	}
+
+	return parseToken, nil
+}
+
 func (s *UserService) GetUsers(ctx context.Context, userIDs []string) ([]*entity.User, []error) {
 	return s.userRepo.GetUsers(ctx, userIDs)
+}
+
+func (s *UserService) UpdateProfile(ctx context.Context, input UserEditProfile) (bool, error) {
+	ok, err := s.userRepo.UpdateProfile(
+		ctx, entity.User{
+			Id:    input.Id,
+			Name:  input.Name,
+			Email: input.Email,
+			Phone: input.Phone,
+			City:  input.City,
+		},
+	)
+	if err != nil || !ok {
+		log.Error(fmt.Sprintf("Service - UserService - UpdateProfile: %v", err))
+		return false, ErrCannotUpdateProduct
+	}
+
+	return ok, nil
 }

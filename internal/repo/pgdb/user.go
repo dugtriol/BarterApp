@@ -128,3 +128,41 @@ func (u *UserRepo) GetUsers(ctx context.Context, userIDs []string) ([]*entity.Us
 	}
 	return users, errs
 }
+
+func (u *UserRepo) UpdateProfile(ctx context.Context, input entity.User) (bool, error) {
+	var (
+		err error
+		tx  pgx.Tx
+	)
+	tx, err = u.Cluster.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("UserRepo.UpdateProfile - p.Cluster.Begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	sql, args, err := u.
+		Builder.
+		Update(userTable).
+		Set("name", input.Name).
+		Set("email", input.Email).
+		Set("phone", input.Phone).
+		Set("city", input.City).
+		Where("id = ?", input.Id).
+		ToSql()
+	if err != nil {
+		return false, fmt.Errorf("UserRepo.UpdateProfile - query build error: %v", err)
+	}
+
+	log.Info(sql)
+
+	_, err = tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return false, fmt.Errorf("UserRepo.UpdateProfile - tx.Exec: %v", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return false, fmt.Errorf("UserRepo.UpdateProfile - tx.Commit: %v", err)
+	}
+	return true, nil
+}

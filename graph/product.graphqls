@@ -13,10 +13,11 @@ input CreateProductInput {
     category: ProductCategory!
     name: String!
     description: String!
-    image: String!
+    image: Upload!
 }
 
 enum ProductCategory {
+    DEFAULT
     HOME
     CLOTHES
     CHILDREN
@@ -28,4 +29,18 @@ enum ProductStatus {
     AVAILABLE
     EXCHANGING
     EXCHANGED
+}
+
+input EditProductInput {
+    id: ID!
+    category: ProductCategory!
+    name: String!
+    description: String!
+    image: Upload
+}
+
+enum ProductSort {
+    DEFAULT
+    DATE
+    DISTANCE
 }

@@ -44,3 +44,10 @@ enum UserMode {
     CLIENT
     ADMIN
 }
+
+input EditProfileInput {
+    name: String!
+    email: String!
+    phone: String!
+    city: String!
+}

@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/dugtriol/BarterApp/graph/model"
 	"github.com/dugtriol/BarterApp/internal/entity"
 	"github.com/dugtriol/BarterApp/internal/repo/repoerrs"
 	"github.com/dugtriol/BarterApp/pkg/postgres"
@@ -68,7 +70,7 @@ func (p *TransactionRepo) GetByField(ctx context.Context, field, value string) (
 	sql, args, _ := p.Builder.Select("*").
 		From(transactionsTable).
 		Where(fmt.Sprintf("%v = ?", field), value).
-		OrderBy("id").
+		OrderBy("updated_at").
 		ToSql()
 	log.Info(sql)
 	return p.Pagination(ctx, sql, args)
@@ -101,7 +103,7 @@ func (p *TransactionRepo) Pagination(ctx context.Context, sql string, args []int
 		output = append(output, t)
 	}
 	rows.Close()
-
+	log.Info(fmt.Sprintf("pagination - %v", output))
 	return output, nil
 }
 
@@ -129,6 +131,7 @@ func (p *TransactionRepo) ChangeStatus(ctx context.Context, transactionID, statu
 		Builder.
 		Update(transactionsTable).
 		Set("status", status).
+		Set("updated_at", time.Now()).
 		Where("id = ?", transactionID).
 		Suffix(
 			"RETURNING product_id_owner, product_id_buyer",
@@ -190,4 +193,97 @@ func (p *TransactionRepo) CheckIsOwner(ctx context.Context, userId string, trans
 
 func (p *TransactionRepo) CheckIsBuyer(ctx context.Context, userId string, transactionId string) (bool, error) {
 	return p.CheckIs(ctx, "buyer", userId, transactionId)
+}
+
+func (p *TransactionRepo) GetCreated(ctx context.Context, owner_id string) ([]entity.Transaction, error) {
+	sql, args, err := p.Builder.Select("*").
+		From(transactionsTable).
+		Where("(buyer = ? OR owner = ?)", owner_id, owner_id).
+		Where("status = ?", model.TransactionStatusCreated.String()).
+		OrderBy("updated_at").
+		ToSql()
+	log.Info(sql)
+	if err != nil {
+		log.Error("Error building SQL query:", err)
+		return nil, err
+	}
+
+	//log.Info("Executing SQL query:", sql, args)
+	return p.Pagination(ctx, sql, args)
+}
+
+func (p *TransactionRepo) GetOngoing(ctx context.Context, buyer_id string) ([]entity.Transaction, error) {
+	log.Info("GetOngoing - buyer_id - ", buyer_id)
+	sql, args, err := p.Builder.Select("*").
+		From(transactionsTable).
+		Where("(buyer = ? OR owner = ?)", buyer_id, buyer_id).
+		Where("status = ?", model.TransactionStatusOngoing.String()).
+		OrderBy("updated_at").
+		ToSql()
+	log.Info(sql)
+	if err != nil {
+		log.Error("Error building SQL query:", err)
+		return nil, err
+	}
+
+	//log.Info("Executing SQL query:", sql, args)
+	return p.Pagination(ctx, sql, args)
+}
+
+func (p *TransactionRepo) GetArchive(ctx context.Context, id string) ([]entity.Transaction, error) {
+	sql, args, err := p.Builder.Select("*").
+		From(transactionsTable).
+		Where("(buyer = ? OR owner = ?)", id, id).
+		Where("(status = ? OR status = ?)", model.TransactionStatusDeclined.String(), model.TransactionStatusDone.String()).
+		OrderBy("updated_at").
+		ToSql()
+	log.Info(sql)
+	if err != nil {
+		log.Error("Error building SQL query:", err)
+		return nil, err
+	}
+
+	//log.Info("Executing SQL query:", sql, args)
+	return p.Pagination(ctx, sql, args)
+}
+
+func (p *TransactionRepo) UpdateTime(ctx context.Context, transaction_id string) (bool, error) {
+	var (
+		err error
+		tx  pgx.Tx
+	)
+	tx, err = p.Cluster.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("TransactionRepo.UpdateTime - r.Cluster.Begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	sql, args, err := p.
+		Builder.
+		Update(transactionsTable).
+		Set("updated_at", time.Now()).
+		Where("id = ?", transaction_id).
+		ToSql()
+	log.Info(sql)
+	if err != nil {
+		return false, fmt.Errorf("TransactionRepo.UpdateTime - p.Builder.Update: %v", err)
+	}
+
+	// Execute the query and scan the returned values into variables
+	result, err := tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return false, fmt.Errorf("TransactionRepo.UpdateTime - tx.QueryRow: %v", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return false, repoerrs.ErrNotFound
+	}
+
+	// Commit the transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		return false, fmt.Errorf("TransactionRepo.UpdateTime - tx.Commit: %v", err)
+	}
+
+	return true, nil
 }
